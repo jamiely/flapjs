@@ -22,5 +22,7 @@ browsers:
 Media
 =====
 
-* ![Screenshot](https://raw2.github.com/jamiely/flapjs/master/img/flapjs-532364d.png) [532364d](http://youtu.be/2xWL0K8jh6I)
+* 532364d
+  * ![Screenshot](https://raw2.github.com/jamiely/flapjs/master/img/flapjs-532364d.png) 
+  * [Youtube](http://youtu.be/2xWL0K8jh6I)
 
