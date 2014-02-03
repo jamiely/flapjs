@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="game"></div>
+</body>
+<script>
+(function(root, el){
+  var GRAVITY_FAC = 10;
+  var GRAVITY = 12 * GRAVITY_FAC;
+  var JUMP_VEL = - 12 * GRAVITY_FAC;
+  var PIPE_WID = 20;
+  var PIPE_PAD = PIPE_WID * 4;
+  var TOP = 0;
+  var BOTTOM = 200;
+  var PIPE_BUF = 20;
+  var RENDER_X = 60;
+
+  // Creates the canvas
+  function setupCanvas(parent) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 500;
+    canvas.height = 200;
+    canvas.style.border = '1px black solid';
+    parent.appendChild(canvas);
+    return canvas;
+  }
+  // generates a new pipe at a point after the last active pipe
+  function newPipes(game) {
+    var holeSize = {
+      width: PIPE_WID,
+      height: game.hero.size.height * 5
+    };
+
+    var hole = Math.floor(Math.random() * (BOTTOM - 2 * holeSize.height - TOP))
+      + holeSize.height;
+
+    var lastPipe = game.pipes[game.pipes.length - 1];
+    var x = lastPipe.pos.x + PIPE_PAD;
+    var h2 = holeSize.height/2;
+    var holePts = [hole - h2, hole + h2];
+
+    var p1 = {
+      pos: {
+        x: x,
+        y: TOP
+      },
+      size: {
+        width: PIPE_WID,
+        height: (hole - h2)
+      }
+    };
+    var p2 = {
+      pos: {
+        x: x,
+        y: hole + h2
+      },
+      size: {
+        width: PIPE_WID,
+        height: (BOTTOM - (hole + h2))
+      }
+    };
+
+    return [p1, p2];
+  }
+
+  function newGame() {
+    var game = {
+      hero: {
+        pos: {
+          x: 20, y: 20
+        },
+        size: {
+          width: 15, height: 10
+        },
+        vel: {
+          x: 50, y: 0
+        }
+      },
+      pipes: [ ]
+    };
+
+    var up = true;
+    [100].forEach(function(x) {
+      var pipe = { 
+        pos: {x: x, y: up ? 0 : 100},
+        size: {width: PIPE_WID, height: 40}
+      };
+      game.pipes.push(pipe);
+      up = !up;
+    });
+
+    return game;
+  }
+
+  function pt(x,y) {
+    return {x:x, y:y};
+  }
+  function addToPt(a, b) {
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+  }
+  function addPt(a, b) {
+    return {
+      x: a.x + b.x,
+      y: a.y + b.y
+    };
+  }
+
+  function heroIsOutOfBounds(hero) {
+    return hero.pos.y < TOP || hero.pos.y > BOTTOM;
+  }
+
+  function isGameOver(game) {
+    if(heroIsOutOfBounds(game.hero)) return true;
+
+    for(var i = 0; i<game.pipes.length; i ++ ) {
+      if(collides(game.hero, game.pipes[i])) return true;
+    }
+    return false;
+  }
+
+  // tick the game by delta seconds
+  function tick(game, delta) {
+    if(game.pause || game.isGameOver) {
+      return;
+    } else if(isGameOver(game)) {
+      alert('Game over');
+      game.isGameOver = true;
+      return;
+    }
+
+    var dAcel = {
+      x: 0,
+      y: GRAVITY * delta
+    };
+    var dPt = {
+      x: game.hero.vel.x * delta,
+      y: game.hero.vel.y * delta + 0.5 * GRAVITY * delta * delta
+    };
+    addToPt(game.hero.pos, dPt);
+    addToPt(game.hero.vel, dAcel);
+    handlePipes(game);
+  }
+
+  function cleanupPipes(game) {
+    while(game.pipes.length > 0 && 
+      game.pipes[0].pos.x + game.pipes[0].size.width + RENDER_X < 
+        game.hero.pos.x - game.hero.size.width) {
+      game.pipes.shift();
+    }
+  }
+  function addPipes(game) {
+    while(game.pipes.length < PIPE_BUF) {
+      game.pipes.push.apply(game.pipes, newPipes(game));
+    }
+  }
+  function handlePipes(game) {
+    cleanupPipes(game);
+    addPipes(game);
+  }
+
+  function between(b, a, c) {
+    return (a < b && b <= c) || 
+      (a >= b && b > c);
+  }
+
+  function within(pt, b) {
+    if(between(pt.x, b.pos.x, b.pos.x + b.size.width) &&
+      between(pt.y, b.pos.y, b.pos.y + b.size.height)) return true;
+
+    return false;
+  }
+
+  function farPt(ent) {
+    return {
+      x: ent.pos.x + ent.size.width,
+      y: ent.pos.y + ent.size.height
+    };
+  }
+
+  function p(ent) {
+    return "[size=" + ent.size.width + "," + ent.size.height + 
+      " pos=" + ent.pos.x + "," + ent.pos.y +  "]";
+  }
+
+  function allPts(ent) {
+    return [pt(0, 0), pt(ent.size.width, 0),
+      pt(0, ent.size.height), pt(ent.size.width, ent.size.height)].
+      map(function(d) {
+        return addPt(ent.pos, d);
+      });
+  }
+
+  function anyPtsWithin(a, b) {
+    var allPtsA = allPts(a);
+    for(var i = 0; i < allPtsA.length; i ++ ) {
+      if(within(allPtsA[i], b)) return true;
+    }
+    return false;
+  }
+
+  function collides(a, b) {
+    if(anyPtsWithin(a, b)) return true;
+    if(anyPtsWithin(b, a)) return true;
+
+    return false;
+  }
+
+  function drawHero(cxt, hero) {
+    cxt.fillStyle = 'red';
+    cxt.fillRect(RENDER_X, hero.pos.y, 
+      hero.size.width, hero.size.height);
+  }
+  function drawPipe(cxt, pipe, adjX) {
+    cxt.fillStyle = 'green';
+    cxt.fillRect(pipe.pos.x - (adjX - RENDER_X), pipe.pos.y, 
+      pipe.size.width, pipe.size.height);
+  }
+
+  function render(game, canvas) {
+    var cxt = canvas.getContext('2d');
+
+    cxt.clearRect(0, 0, 1000, 1000);
+    drawHero(cxt, game.hero);
+
+    game.pipes.forEach(function(pipe) {
+      drawPipe(cxt, pipe, game.hero.pos.x);
+    });
+  }
+
+  function setupEventHandlers(game) {
+    document.addEventListener('keydown', function(evt) {
+      if (evt.keyCode == 80) {
+        game.pause = ! game.pause;
+      } else if(evt.keyCode == 32) { // space
+        game.hero.vel.y += JUMP_VEL;
+      } else {
+        console.log(evt.keyCode);
+      }
+    });
+  }
+  
+  function genRequestAnimFunction(root, game, canvas, callback) {
+    var lastTimestamp = 0;
+    var requestAnim = function (timestamp) {
+      var elapsed = timestamp - (lastTimestamp || timestamp);
+      elapsed = elapsed / 1000.0;
+      tick(game, elapsed);
+      render(game, canvas);
+      lastTimestamp = timestamp;
+
+      callback(requestAnim);
+    };
+    return requestAnim;
+  }
+
+  function start(root, game, canvas) {
+    setupEventHandlers(game);
+    if(!root.requestAnimationFrame) return console.log("Problem starting game");
+
+    var fun = genRequestAnimFunction(root, game, canvas, function(funRequest) {
+      root.requestAnimationFrame(funRequest);
+    });
+    root.requestAnimationFrame(fun);
+  }
+
+  start(root, newGame(), setupCanvas(el));
+
+})(window, document.getElementById('game'));
+</script>
+</html>
+
