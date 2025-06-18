@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <body>
-<div id="game"></div>
 <button id="startButton" style="font-size: 18px; padding: 10px 20px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Start Game</button>
+<div id="game"></div>
 <h1>Instructions</h1>
 <ul>
   <li>You are the red block.</li>
@@ -133,7 +133,7 @@
       return;
     } else if(isGameOver(game)) {
       game.isGameOver = true;
-      showStartButton();
+      enableStartButton();
       return;
     }
 
@@ -274,19 +274,24 @@
 
   function startGame() {
     var startButton = document.getElementById('startButton');
-    startButton.style.display = 'none';
+    startButton.disabled = true;
+    startButton.textContent = 'Playing...';
+    startButton.style.backgroundColor = '#cccccc';
+    startButton.style.cursor = 'not-allowed';
     start(root, newGame(), canvas);
   }
 
-  function showStartButton() {
+  function enableStartButton() {
     var startButton = document.getElementById('startButton');
-    startButton.style.display = 'inline-block';
+    startButton.disabled = false;
+    startButton.textContent = 'Restart Game';
+    startButton.style.backgroundColor = '#4CAF50';
+    startButton.style.cursor = 'pointer';
   }
 
   var canvas = setupCanvas(el);
   var startButton = document.getElementById('startButton');
   startButton.addEventListener('click', startGame);
-  showStartButton();
 
 })(window, document.getElementById('game'));
 </script>
