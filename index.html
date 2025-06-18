@@ -2,6 +2,7 @@
 <html>
 <body>
 <div id="game"></div>
+<button id="startButton" style="font-size: 18px; padding: 10px 20px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Start Game</button>
 <h1>Instructions</h1>
 <ul>
   <li>You are the red block.</li>
@@ -131,8 +132,8 @@
     if(game.pause || game.isGameOver) {
       return;
     } else if(isGameOver(game)) {
-      alert('Game over');
       game.isGameOver = true;
+      showStartButton();
       return;
     }
 
@@ -271,7 +272,21 @@
     root.requestAnimationFrame(fun);
   }
 
-  start(root, newGame(), setupCanvas(el));
+  function startGame() {
+    var startButton = document.getElementById('startButton');
+    startButton.style.display = 'none';
+    start(root, newGame(), canvas);
+  }
+
+  function showStartButton() {
+    var startButton = document.getElementById('startButton');
+    startButton.style.display = 'inline-block';
+  }
+
+  var canvas = setupCanvas(el);
+  var startButton = document.getElementById('startButton');
+  startButton.addEventListener('click', startGame);
+  showStartButton();
 
 })(window, document.getElementById('game'));
 </script>
