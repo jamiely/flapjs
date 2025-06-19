@@ -1,16 +1,29 @@
 <!DOCTYPE html>
 <html>
 <body>
-<button id="startButton" style="font-size: 18px; padding: 10px 20px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Start Game</button>
-<div id="game"></div>
-<h1>Instructions</h1>
-<ul>
-  <li>You are the red block.</li>
-  <li>Avoid the green blocks.</li>
-  <li>Press SPACE to "jump" / "flap".</li>
-  <li>Press P to pause/unpause the game.</li>
-  <li>Press ENTER to start/restart the game.</li>
-</ul>
+<div id="game" style="position: relative; display: inline-block;">
+  <!-- Title Screen Overlay -->
+  <div id="titleScreen" style="position: absolute; top: 0; left: 0; width: 500px; height: 200px; background-color: rgba(0, 0, 0, 0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;">
+    <h1 style="font-size: 48px; color: #FFD700; text-shadow: 2px 2px 4px #000; margin-bottom: 30px; margin-top: 0;">FlapJS</h1>
+    <div>
+      <button id="startButton" style="font-size: 24px; padding: 15px 30px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 150px;">Start</button>
+      <button id="instructionsButton" style="font-size: 24px; padding: 15px 30px; margin: 10px; background-color: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 150px;">Instructions</button>
+    </div>
+  </div>
+  
+  <!-- Instructions Overlay -->
+  <div id="instructionsScreen" style="position: absolute; top: 0; left: 0; width: 500px; height: 200px; background-color: rgba(0, 0, 0, 0.9); display: none; flex-direction: column; justify-content: center; align-items: flex-start; z-index: 10; padding: 20px; box-sizing: border-box;">
+    <h2 style="color: #2196F3; margin-top: 0; margin-bottom: 15px; font-size: 24px; align-self: center;">Instructions</h2>
+    <ul style="color: white; font-size: 16px; line-height: 1.6; margin: 0; padding-left: 20px;">
+      <li>Press SPACE to jump/flap</li>
+      <li>Press P to pause/unpause the game</li>
+      <li>Press ENTER to start/restart the game</li>
+    </ul>
+    <div style="align-self: center; margin-top: 20px;">
+      <button id="backButton" style="font-size: 18px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer;">Back</button>
+    </div>
+  </div>
+</div>
 </body>
 <script>
 (function(root, el){
@@ -150,7 +163,8 @@
       },
       pipes: [ ],
       score: 0,
-      lastHole: null
+      lastHole: null,
+      state: 'title' // 'title', 'instructions', 'playing'
     };
 
 
@@ -187,12 +201,16 @@
 
   // tick the game by delta seconds
   function tick(game, delta) {
+    if(game.state !== 'playing') {
+      return;
+    }
+    
     if(game.pause || game.isGameOver) {
       return;
     } else if(isGameOver(game)) {
       game.isGameOver = true;
       playGameOverSound();
-      enableStartButton();
+      enableStartButton(game);
       return;
     }
 
@@ -384,30 +402,35 @@
     var cxt = canvas.getContext('2d');
 
     cxt.clearRect(0, 0, 1000, 1000);
-    drawHero(cxt, game.hero);
+    
+    if (game.state === 'playing') {
+      drawHero(cxt, game.hero);
 
-    game.pipes.forEach(function(pipe) {
-      drawPipe(cxt, pipe, game.hero.pos.x);
-    });
+      game.pipes.forEach(function(pipe) {
+        drawPipe(cxt, pipe, game.hero.pos.x);
+      });
 
-    // Draw score
-    cxt.fillStyle = 'black';
-    cxt.font = '24px Arial';
-    cxt.fillText('Score: ' + game.score, 10, 30);
+      // Draw score
+      cxt.fillStyle = 'black';
+      cxt.font = '24px Arial';
+      cxt.fillText('Score: ' + game.score, 10, 30);
+    }
   }
 
   function setupEventHandlers(game) {
     document.addEventListener('keydown', function(evt) {
-      if (evt.keyCode == 80) {
-        game.pause = ! game.pause;
-      } else if(evt.keyCode == 32 && !game.isGameOver) { // space
-        game.hero.vel.y += JUMP_VEL;
-        if (game.hero.vel.y < MAX_UPWARD_VEL) {
-          game.hero.vel.y = MAX_UPWARD_VEL;
+      if (game.state === 'instructions' && evt.keyCode === 27) { // ESC key
+        showTitleScreen(game);
+      } else if (game.state === 'playing') {
+        if (evt.keyCode == 80) { // P key
+          game.pause = ! game.pause;
+        } else if(evt.keyCode == 32 && !game.isGameOver) { // space
+          game.hero.vel.y += JUMP_VEL;
+          if (game.hero.vel.y < MAX_UPWARD_VEL) {
+            game.hero.vel.y = MAX_UPWARD_VEL;
+          }
+          playBounceSound();
         }
-        playBounceSound();
-      } else {
-        console.log(evt.keyCode);
       }
     });
   }
@@ -426,47 +449,83 @@
     return requestAnim;
   }
 
-  function start(root, game, canvas) {
-    setupEventHandlers(game);
-    if(!root.requestAnimationFrame) return console.log("Problem starting game");
 
+  function startGame(game) {
+    game.state = 'playing';
+    game.isGameOver = false;
+    game.pause = false;
+    game.score = 0;
+    game.pipes = [];
+    game.hero.pos = {x: 20, y: 20};
+    game.hero.vel = {x: 50, y: 0};
+    game.lastHole = null;
+    
+    // Hide overlays
+    document.getElementById('titleScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'none';
+    
+    initAudio();
+  }
+  
+  function showInstructions(game) {
+    game.state = 'instructions';
+    document.getElementById('titleScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'flex';
+  }
+  
+  function showTitleScreen(game) {
+    game.state = 'title';
+    document.getElementById('titleScreen').style.display = 'flex';
+    document.getElementById('instructionsScreen').style.display = 'none';
+  }
+
+  function enableStartButton(game) {
+    showTitleScreen(game);
+  }
+
+  var canvas = setupCanvas(el);
+  var game = newGame();
+  
+  setupEventHandlers(game);
+  
+  var startButton = document.getElementById('startButton');
+  var instructionsButton = document.getElementById('instructionsButton');
+  var backButton = document.getElementById('backButton');
+  
+  startButton.addEventListener('click', function() {
+    if (game.state === 'title' || game.isGameOver) {
+      startGame(game);
+    } else if (game.state === 'instructions') {
+      showTitleScreen(game);
+    }
+  });
+  
+  instructionsButton.addEventListener('click', function() {
+    showInstructions(game);
+  });
+  
+  backButton.addEventListener('click', function() {
+    showTitleScreen(game);
+  });
+  
+  // Global Enter key listener for starting/restarting game
+  document.addEventListener('keydown', function(evt) {
+    if (evt.keyCode == 13) { // Enter key
+      if (game.state === 'title' || game.isGameOver) {
+        startGame(game);
+      } else if (game.state === 'instructions') {
+        showTitleScreen(game);
+      }
+    }
+  });
+  
+  // Start the animation loop
+  if(root.requestAnimationFrame) {
     var fun = genRequestAnimFunction(root, game, canvas, function(funRequest) {
       root.requestAnimationFrame(funRequest);
     });
     root.requestAnimationFrame(fun);
   }
-
-  function startGame() {
-    var startButton = document.getElementById('startButton');
-    startButton.disabled = true;
-    startButton.textContent = 'Playing...';
-    startButton.style.backgroundColor = '#cccccc';
-    startButton.style.cursor = 'not-allowed';
-    initAudio();
-    start(root, newGame(), canvas);
-  }
-
-  function enableStartButton() {
-    var startButton = document.getElementById('startButton');
-    startButton.disabled = false;
-    startButton.textContent = 'Restart Game';
-    startButton.style.backgroundColor = '#4CAF50';
-    startButton.style.cursor = 'pointer';
-  }
-
-  var canvas = setupCanvas(el);
-  var startButton = document.getElementById('startButton');
-  startButton.addEventListener('click', startGame);
-  
-  // Global Enter key listener for starting/restarting game
-  document.addEventListener('keydown', function(evt) {
-    if (evt.keyCode == 13) { // Enter key
-      var startButton = document.getElementById('startButton');
-      if (!startButton.disabled) {
-        startGame();
-      }
-    }
-  });
 
 })(window, document.getElementById('game'));
 </script>
