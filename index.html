@@ -639,9 +639,31 @@ body {
     return false;
   }
 
+  function getHeroCollisionBounds(hero) {
+    // Create a smaller collision box (60% of visual size, centered)
+    var collisionScale = 0.6;
+    var visualW = hero.size.width;
+    var visualH = hero.size.height;
+    var collisionW = visualW * collisionScale;
+    var collisionH = visualH * collisionScale;
+    
+    return {
+      pos: {
+        x: hero.pos.x + (visualW - collisionW) / 2,
+        y: hero.pos.y + (visualH - collisionH) / 2
+      },
+      size: {
+        width: collisionW,
+        height: collisionH
+      }
+    };
+  }
+
   function collides(a, b) {
-    if(anyPtsWithin(a, b)) return true;
-    if(anyPtsWithin(b, a)) return true;
+    // Use smaller collision bounds for hero
+    var heroCollisionBounds = getHeroCollisionBounds(a);
+    if(anyPtsWithin(heroCollisionBounds, b)) return true;
+    if(anyPtsWithin(b, heroCollisionBounds)) return true;
 
     return false;
   }
