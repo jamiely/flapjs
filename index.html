@@ -399,7 +399,7 @@
     document.addEventListener('keydown', function(evt) {
       if (evt.keyCode == 80) {
         game.pause = ! game.pause;
-      } else if(evt.keyCode == 32) { // space
+      } else if(evt.keyCode == 32 && !game.isGameOver) { // space
         game.hero.vel.y += JUMP_VEL;
         if (game.hero.vel.y < MAX_UPWARD_VEL) {
           game.hero.vel.y = MAX_UPWARD_VEL;
