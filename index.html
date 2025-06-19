@@ -54,7 +54,8 @@
       size: {
         width: PIPE_WID,
         height: (hole - h2)
-      }
+      },
+      passed: false
     };
     var p2 = {
       pos: {
@@ -64,7 +65,8 @@
       size: {
         width: PIPE_WID,
         height: (BOTTOM - (hole + h2))
-      }
+      },
+      passed: false
     };
 
     return [p1, p2];
@@ -83,14 +85,16 @@
           x: 50, y: 0
         }
       },
-      pipes: [ ]
+      pipes: [ ],
+      score: 0
     };
 
     var up = true;
     [100].forEach(function(x) {
       var pipe = { 
         pos: {x: x, y: up ? 0 : 100},
-        size: {width: PIPE_WID, height: 40}
+        size: {width: PIPE_WID, height: 40},
+        passed: false
       };
       game.pipes.push(pipe);
       up = !up;
@@ -162,9 +166,21 @@
       game.pipes.push.apply(game.pipes, newPipes(game));
     }
   }
+  function checkScore(game) {
+    var heroRight = game.hero.pos.x + game.hero.size.width;
+    
+    game.pipes.forEach(function(pipe) {
+      if (!pipe.passed && heroRight > pipe.pos.x + pipe.size.width) {
+        pipe.passed = true;
+        game.score++;
+      }
+    });
+  }
+
   function handlePipes(game) {
     cleanupPipes(game);
     addPipes(game);
+    checkScore(game);
   }
 
   function between(b, a, c) {
@@ -234,6 +250,11 @@
     game.pipes.forEach(function(pipe) {
       drawPipe(cxt, pipe, game.hero.pos.x);
     });
+
+    // Draw score
+    cxt.fillStyle = 'black';
+    cxt.font = '24px Arial';
+    cxt.fillText('Score: ' + game.score, 10, 30);
   }
 
   function setupEventHandlers(game) {
