@@ -272,9 +272,39 @@
     cxt.fill();
   }
   function drawPipe(cxt, pipe, adjX) {
-    cxt.fillStyle = 'green';
-    cxt.fillRect(pipe.pos.x - (adjX - RENDER_X), pipe.pos.y, 
-      pipe.size.width, pipe.size.height);
+    var x = pipe.pos.x - (adjX - RENDER_X);
+    var y = pipe.pos.y;
+    var w = pipe.size.width;
+    var h = pipe.size.height;
+    
+    // Main pipe body (darker green)
+    cxt.fillStyle = '#228B22'; // Forest green
+    cxt.fillRect(x + 2, y, w - 4, h);
+    
+    // Pipe cap (wider section at the end)
+    var capHeight = Math.min(8, h * 0.2);
+    var capWidth = w + 4;
+    var capX = x - 2;
+    
+    // Determine if this is a top pipe or bottom pipe based on position
+    var isTopPipe = y === 0;
+    var capY = isTopPipe ? y + h - capHeight : y;
+    
+    // Draw pipe cap
+    cxt.fillStyle = '#32CD32'; // Lime green
+    cxt.fillRect(capX, capY, capWidth, capHeight);
+    
+    // Add highlight on the left side of pipe
+    cxt.fillStyle = '#90EE90'; // Light green
+    cxt.fillRect(x + 2, y, 2, h);
+    
+    // Add shadow on the right side of pipe
+    cxt.fillStyle = '#006400'; // Dark green
+    cxt.fillRect(x + w - 4, y, 2, h);
+    
+    // Add highlight on pipe cap
+    cxt.fillStyle = '#98FB98'; // Pale green
+    cxt.fillRect(capX, capY, 2, capHeight);
   }
 
   function render(game, canvas) {
