@@ -41,8 +41,16 @@
       height: game.hero.size.height * 6
     };
 
-    var hole = Math.floor(Math.random() * (BOTTOM - 2 * holeSize.height - TOP))
-      + holeSize.height;
+    var minHole = holeSize.height;
+    var maxHole = BOTTOM - holeSize.height;
+    var hole;
+    
+    // Prevent same gap position twice in a row
+    do {
+      hole = Math.floor(Math.random() * (maxHole - minHole)) + minHole;
+    } while (game.lastHole && Math.abs(hole - game.lastHole) < holeSize.height * 0.5);
+    
+    game.lastHole = hole;
 
     var lastPipe = game.pipes[game.pipes.length - 1];
     var x = lastPipe ? lastPipe.pos.x + PIPE_PAD : 150;
@@ -89,7 +97,8 @@
         }
       },
       pipes: [ ],
-      score: 0
+      score: 0,
+      lastHole: null
     };
 
 
