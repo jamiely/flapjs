@@ -20,22 +20,21 @@ body {
 }
 
 #gameCanvas {
-  border: 2px solid #333;
   background-color: #87CEEB;
 }
 
 .overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 10;
-  border-radius: 10px;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -273,21 +272,7 @@ body {
   }
   
   function updateOverlaySizes(canvasWidth, canvasHeight) {
-    var titleScreen = document.getElementById('titleScreen');
-    var instructionsScreen = document.getElementById('instructionsScreen');
-    var gameOverScreen = document.getElementById('gameOverScreen');
-    
-    // Scale overlays to match canvas size
-    titleScreen.style.width = canvasWidth + 'px';
-    titleScreen.style.height = canvasHeight + 'px';
-    
-    instructionsScreen.style.width = canvasWidth + 'px';
-    instructionsScreen.style.height = canvasHeight + 'px';
-    
-    gameOverScreen.style.width = canvasWidth + 'px';
-    gameOverScreen.style.height = canvasHeight + 'px';
-    
-    // Scale font sizes based on canvas size
+    // Overlays now take full window, but we still scale fonts based on canvas size
     var scaleFactor = Math.min(canvasWidth / 500, canvasHeight / 200);
     
     // Scale title screen
@@ -696,6 +681,14 @@ body {
   }
 
 
+  function showCanvasBorder() {
+    document.getElementById('gameCanvas').style.border = '2px solid #333';
+  }
+  
+  function hideCanvasBorder() {
+    document.getElementById('gameCanvas').style.border = 'none';
+  }
+  
   function startGame(game) {
     game.state = 'playing';
     game.isGameOver = false;
@@ -706,10 +699,11 @@ body {
     game.hero.vel = {x: 50, y: 0};
     game.lastHole = null;
     
-    // Hide all overlays
+    // Hide all overlays and show canvas border
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
+    showCanvasBorder();
     
     initAudio();
   }
@@ -719,6 +713,7 @@ body {
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'flex';
     document.getElementById('gameOverScreen').style.display = 'none';
+    hideCanvasBorder();
   }
   
   function showTitleScreen(game) {
@@ -727,6 +722,7 @@ body {
     document.getElementById('titleScreen').style.display = 'flex';
     document.getElementById('instructionsScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
+    hideCanvasBorder();
   }
   
   function updateHighScoreDisplay() {
@@ -787,10 +783,11 @@ body {
       updateGameOverScoresList();
     }
     
-    // Show game over screen
+    // Show game over screen and hide canvas border
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'flex';
+    hideCanvasBorder();
   }
 
   function enableStartButton(game) {
