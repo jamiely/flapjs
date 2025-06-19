@@ -172,7 +172,7 @@
   }
 
   function heroIsOutOfBounds(hero) {
-    return hero.pos.y < TOP || hero.pos.y > BOTTOM;
+    return hero.pos.y > BOTTOM;
   }
 
   function isGameOver(game) {
