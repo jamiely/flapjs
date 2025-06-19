@@ -651,51 +651,88 @@ body {
     var y = hero.pos.y;
     var w = hero.size.width;
     var h = hero.size.height;
+    var centerX = x + w/2;
+    var centerY = y + h/2;
+    var radius = Math.min(w, h)/2;
     
-    // Calculate rotation smoothly based on velocity
-    var maxUpwardTilt = -1.0; // Maximum upward tilt (radians)
-    var maxDownwardTilt = 1.2; // Maximum downward tilt (radians)
-    var maxVelocity = 250; // Velocity at which max tilt is reached
+    // Calculate rotation based on velocity
+    var maxUpwardTilt = -0.5; // Maximum upward tilt (radians)
+    var maxDownwardTilt = 0.8; // Maximum downward tilt (radians)
+    var maxVelocity = 300; // Velocity at which max tilt is reached
     
     var rotation = Math.max(maxUpwardTilt, Math.min(maxDownwardTilt, hero.vel.y / maxVelocity * maxDownwardTilt));
     
     // Save context and apply rotation
     cxt.save();
-    cxt.translate(x + w/2, y + h/2);
+    cxt.translate(centerX, centerY);
     cxt.rotate(rotation);
-    cxt.translate(-(w/2), -(h/2));
+    cxt.translate(-centerX, -centerY);
     
-    // Draw bird body (oval)
-    cxt.fillStyle = '#FFD700'; // Golden yellow
+    // Draw main body (circle with soft gradient)
+    var gradient = cxt.createRadialGradient(centerX - radius * 0.3, centerY - radius * 0.3, 0, centerX, centerY, radius);
+    gradient.addColorStop(0, '#FFF176'); // Light yellow
+    gradient.addColorStop(1, '#FFD54F'); // Golden yellow
+    cxt.fillStyle = gradient;
     cxt.beginPath();
-    cxt.ellipse(w/2, h/2, w/2.5, h/2.5, 0, 0, 2 * Math.PI);
+    cxt.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Draw bird head (smaller circle)
-    cxt.fillStyle = '#FFD700';
+    // Draw cheek blush
+    cxt.fillStyle = 'rgba(255, 182, 193, 0.4)'; // Light pink
     cxt.beginPath();
-    cxt.ellipse(w*0.8, h*0.3, w/4, h/4, 0, 0, 2 * Math.PI);
+    cxt.arc(centerX - radius * 0.4, centerY + radius * 0.2, radius * 0.2, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Draw beak (triangle)
-    cxt.fillStyle = '#FF8C00'; // Orange
+    // Draw beak (rounded triangle)
+    cxt.fillStyle = '#FF9800'; // Bright orange
     cxt.beginPath();
-    cxt.moveTo(w*0.95, h*0.3);
-    cxt.lineTo(w*1.1, h*0.25);
-    cxt.lineTo(w*0.95, h*0.4);
+    cxt.moveTo(centerX + radius * 0.6, centerY - radius * 0.15);
+    cxt.lineTo(centerX + radius * 1.1, centerY);
+    cxt.lineTo(centerX + radius * 0.6, centerY + radius * 0.15);
     cxt.closePath();
     cxt.fill();
     
-    // Draw eye (small black circle)
-    cxt.fillStyle = 'black';
+    // Draw eyes (large and sparkly)
+    // Left eye white base
+    cxt.fillStyle = 'white';
     cxt.beginPath();
-    cxt.ellipse(w*0.85, h*0.25, w/12, h/12, 0, 0, 2 * Math.PI);
+    cxt.arc(centerX + radius * 0.2, centerY - radius * 0.25, radius * 0.25, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Draw wing (ellipse)
-    cxt.fillStyle = '#FFA500'; // Orange
+    // Left eye pupil
+    cxt.fillStyle = 'black';
     cxt.beginPath();
-    cxt.ellipse(w*0.4, h*0.6, w/3, h/6, -0.3, 0, 2 * Math.PI);
+    cxt.arc(centerX + radius * 0.25, centerY - radius * 0.2, radius * 0.12, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Left eye sparkle
+    cxt.fillStyle = 'white';
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.3, centerY - radius * 0.3, radius * 0.06, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right eye white base (smaller)
+    cxt.fillStyle = 'white';
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.5, centerY - radius * 0.35, radius * 0.15, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right eye pupil
+    cxt.fillStyle = 'black';
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.52, centerY - radius * 0.32, radius * 0.08, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right eye sparkle
+    cxt.fillStyle = 'white';
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.56, centerY - radius * 0.38, radius * 0.04, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Draw wing
+    cxt.fillStyle = '#FFB74D'; // Light orange
+    cxt.beginPath();
+    cxt.ellipse(centerX - radius * 0.6, centerY + radius * 0.4, radius * 1.0, radius * 0.5, -0.3, 0, 2 * Math.PI);
     cxt.fill();
     
     // Restore context
