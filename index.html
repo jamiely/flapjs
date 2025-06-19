@@ -24,6 +24,37 @@
   var PIPE_BUF = 20;
   var RENDER_X = 60;
 
+  // Audio context for sound effects
+  var audioContext = null;
+  
+  function initAudio() {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.log('Web Audio API not supported');
+    }
+  }
+  
+  function playBounceSound() {
+    if (!audioContext) return;
+    
+    var oscillator = audioContext.createOscillator();
+    var gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Create a quick bounce sound
+    oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  }
+
   // Creates the canvas
   function setupCanvas(parent) {
     var canvas = document.createElement('canvas');
@@ -352,6 +383,7 @@
         if (game.hero.vel.y < MAX_UPWARD_VEL) {
           game.hero.vel.y = MAX_UPWARD_VEL;
         }
+        playBounceSound();
       } else {
         console.log(evt.keyCode);
       }
@@ -388,6 +420,7 @@
     startButton.textContent = 'Playing...';
     startButton.style.backgroundColor = '#cccccc';
     startButton.style.cursor = 'not-allowed';
+    initAudio();
     start(root, newGame(), canvas);
   }
 
