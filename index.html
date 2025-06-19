@@ -265,11 +265,6 @@
         game.pause = ! game.pause;
       } else if(evt.keyCode == 32) { // space
         game.hero.vel.y += JUMP_VEL;
-      } else if(evt.keyCode == 13) { // Enter key
-        var startButton = document.getElementById('startButton');
-        if (!startButton.disabled) {
-          startGame();
-        }
       } else {
         console.log(evt.keyCode);
       }
@@ -320,6 +315,16 @@
   var canvas = setupCanvas(el);
   var startButton = document.getElementById('startButton');
   startButton.addEventListener('click', startGame);
+  
+  // Global Enter key listener for starting/restarting game
+  document.addEventListener('keydown', function(evt) {
+    if (evt.keyCode == 13) { // Enter key
+      var startButton = document.getElementById('startButton');
+      if (!startButton.disabled) {
+        startGame();
+      }
+    }
+  });
 
 })(window, document.getElementById('game'));
 </script>
