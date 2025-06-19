@@ -389,6 +389,23 @@ body {
     return [p1, p2];
   }
 
+  function generateClouds() {
+    var clouds = [];
+    var numClouds = 8;
+    
+    for (var i = 0; i < numClouds; i++) {
+      clouds.push({
+        x: Math.random() * 800 - 100, // Start some clouds off-screen
+        y: Math.random() * 80 + 10, // Upper portion of screen
+        size: Math.random() * 30 + 15, // Size between 15-45
+        speed: Math.random() * 0.3 + 0.1, // Speed between 0.1-0.4
+        opacity: Math.random() * 0.4 + 0.3 // Opacity between 0.3-0.7
+      });
+    }
+    
+    return clouds;
+  }
+
   function newGame() {
     var game = {
       hero: {
@@ -403,6 +420,7 @@ body {
         }
       },
       pipes: [ ],
+      clouds: generateClouds(),
       score: 0,
       lastHole: null,
       state: 'title' // 'title', 'instructions', 'playing', 'gameover'
@@ -440,8 +458,36 @@ body {
     return false;
   }
 
+  function updateClouds(game, delta) {
+    // Only update clouds if game is playing and not paused
+    if (game.state !== 'playing' || game.pause || game.isGameOver) {
+      return;
+    }
+    
+    // Update cloud positions based on hero's movement and their own speed
+    var heroSpeed = game.hero.vel.x * delta;
+    
+    for (var i = 0; i < game.clouds.length; i++) {
+      var cloud = game.clouds[i];
+      // Move clouds relative to hero movement (parallax effect)
+      cloud.x -= heroSpeed * cloud.speed;
+      
+      // Reset cloud position if it goes off screen
+      if (cloud.x < -cloud.size - 50) {
+        cloud.x = 500 + Math.random() * 100;
+        cloud.y = Math.random() * 80 + 10;
+        cloud.size = Math.random() * 30 + 15;
+        cloud.speed = Math.random() * 0.3 + 0.1;
+        cloud.opacity = Math.random() * 0.4 + 0.3;
+      }
+    }
+  }
+
   // tick the game by delta seconds
   function tick(game, delta) {
+    // Always update clouds, even when not playing
+    updateClouds(game, delta);
+    
     if(game.state !== 'playing') {
       return;
     }
@@ -603,6 +649,28 @@ body {
     // Restore context
     cxt.restore();
   }
+  
+  function drawCloud(cxt, cloud) {
+    cxt.save();
+    cxt.globalAlpha = cloud.opacity;
+    cxt.fillStyle = '#FFFFFF';
+    
+    var x = cloud.x;
+    var y = cloud.y;
+    var size = cloud.size;
+    
+    // Draw cloud as multiple overlapping circles
+    cxt.beginPath();
+    cxt.arc(x, y, size * 0.5, 0, 2 * Math.PI);
+    cxt.arc(x + size * 0.4, y, size * 0.4, 0, 2 * Math.PI);
+    cxt.arc(x - size * 0.4, y, size * 0.4, 0, 2 * Math.PI);
+    cxt.arc(x + size * 0.2, y - size * 0.3, size * 0.35, 0, 2 * Math.PI);
+    cxt.arc(x - size * 0.2, y - size * 0.3, size * 0.35, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    cxt.restore();
+  }
+  
   function drawPipe(cxt, pipe, adjX) {
     var x = pipe.pos.x - (adjX - RENDER_X);
     var y = pipe.pos.y;
@@ -643,6 +711,11 @@ body {
     var cxt = canvas.getContext('2d');
 
     cxt.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Always draw clouds, regardless of game state
+    game.clouds.forEach(function(cloud) {
+      drawCloud(cxt, cloud);
+    });
     
     if (game.state === 'playing') {
       drawHero(cxt, game.hero);
@@ -705,6 +778,7 @@ body {
     game.pause = false;
     game.score = 0;
     game.pipes = [];
+    game.clouds = generateClouds(); // Regenerate clouds for new game
     game.hero.pos = {x: 20, y: 20};
     game.hero.vel = {x: 50, y: 0};
     game.lastHole = null;
