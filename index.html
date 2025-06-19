@@ -16,6 +16,7 @@
   var GRAVITY_FAC = 18;
   var GRAVITY = 12 * GRAVITY_FAC;
   var JUMP_VEL = - 10 * GRAVITY_FAC;
+  var MAX_UPWARD_VEL = - 7 * GRAVITY_FAC;
   var PIPE_WID = 20;
   var PIPE_PAD = PIPE_WID * 4;
   var TOP = 0;
@@ -329,6 +330,9 @@
         game.pause = ! game.pause;
       } else if(evt.keyCode == 32) { // space
         game.hero.vel.y += JUMP_VEL;
+        if (game.hero.vel.y < MAX_UPWARD_VEL) {
+          game.hero.vel.y = MAX_UPWARD_VEL;
+        }
       } else {
         console.log(evt.keyCode);
       }
