@@ -8,6 +8,7 @@
   <li>You are the red block.</li>
   <li>Avoid the green blocks.</li>
   <li>Press SPACE to "jump" / "flap".</li>
+  <li>Press ENTER to start/restart the game.</li>
 </ul>
 </body>
 <script>
@@ -263,6 +264,11 @@
         game.pause = ! game.pause;
       } else if(evt.keyCode == 32) { // space
         game.hero.vel.y += JUMP_VEL;
+      } else if(evt.keyCode == 13) { // Enter key
+        var startButton = document.getElementById('startButton');
+        if (!startButton.disabled) {
+          startGame();
+        }
       } else {
         console.log(evt.keyCode);
       }
