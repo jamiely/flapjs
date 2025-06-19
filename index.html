@@ -62,7 +62,12 @@ body {
 <div id="game">
   <!-- Title Screen Overlay -->
   <div id="titleScreen" class="overlay">
-    <h1 style="font-size: 48px; color: #FFD700; text-shadow: 2px 2px 4px #000; margin-bottom: 30px; margin-top: 0;">FlapJS</h1>
+    <h1 style="font-size: 48px; color: #FFD700; text-shadow: 2px 2px 4px #000; margin-bottom: 20px; margin-top: 0;">FlapJS</h1>
+    <div id="titleHighScore" style="color: white; font-size: 16px; margin-bottom: 20px; text-align: center;">
+      <p style="margin: 0;">High Score</p>
+      <p id="titleHighScoreValue" style="font-size: 24px; margin: 5px 0; color: #FFD700; font-weight: bold;">0</p>
+      <p id="titleHighScoreInitials" style="font-size: 14px; margin: 0; color: #ccc;"></p>
+    </div>
     <div>
       <button id="startButton" style="font-size: 24px; padding: 15px 30px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 150px;">Start</button>
       <button id="instructionsButton" style="font-size: 24px; padding: 15px 30px; margin: 10px; background-color: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 150px;">Instructions</button>
@@ -85,9 +90,13 @@ body {
   <!-- Game Over Overlay -->
   <div id="gameOverScreen" class="overlay">
     <h1 style="color: #FF4444; margin-top: 0; margin-bottom: 10px; font-size: 28px; text-shadow: 2px 2px 4px #000;">Game Over</h1>
-    <div style="color: white; font-size: 18px; margin-bottom: 15px; text-align: center;">
+    <div style="color: white; font-size: 16px; margin-bottom: 10px; text-align: center;">
       <p style="margin: 0;">Final Score</p>
-      <p id="finalScore" style="font-size: 36px; margin: 5px 0; color: #FFD700; font-weight: bold;">0</p>
+      <p id="finalScore" style="font-size: 32px; margin: 5px 0; color: #FFD700; font-weight: bold;">0</p>
+      <p id="newHighScoreMessage" style="margin: 5px 0; color: #00FF00; font-weight: bold; display: none;">NEW HIGH SCORE!</p>
+    </div>
+    <div id="gameOverHighScore" style="color: white; font-size: 14px; margin-bottom: 15px; text-align: center;">
+      <p style="margin: 0;">High Scores</p>
     </div>
     <button id="restartButton" style="font-size: 20px; padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 120px;">Restart</button>
   </div>
@@ -156,6 +165,70 @@ body {
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.8);
   }
+  
+  // High Score Management
+  function getHighScores() {
+    try {
+      var highScoresData = localStorage.getItem('flapjs_highscores');
+      if (highScoresData) {
+        return JSON.parse(highScoresData);
+      }
+    } catch (e) {
+      console.log('Error reading high scores from localStorage');
+    }
+    return [];
+  }
+  
+  function getTopScore() {
+    var scores = getHighScores();
+    return scores.length > 0 ? scores[0] : { score: 0, initials: '' };
+  }
+  
+  function saveHighScore(score, initials) {
+    try {
+      var scores = getHighScores();
+      var newEntry = { score: score, initials: initials || '' };
+      
+      // Add new score and sort by score (descending)
+      scores.push(newEntry);
+      scores.sort(function(a, b) { return b.score - a.score; });
+      
+      // Keep only top 5 scores
+      scores = scores.slice(0, 5);
+      
+      localStorage.setItem('flapjs_highscores', JSON.stringify(scores));
+      return true;
+    } catch (e) {
+      console.log('Error saving high scores to localStorage');
+      return false;
+    }
+  }
+  
+  function isNewHighScore(score) {
+    var scores = getHighScores();
+    return scores.length < 5 || score > scores[scores.length - 1].score;
+  }
+  
+  function getScorePosition(score) {
+    var scores = getHighScores();
+    for (var i = 0; i < scores.length; i++) {
+      if (score >= scores[i].score) {
+        return i + 1; // 1-based position
+      }
+    }
+    return scores.length + 1; // New score would be at the end
+  }
+  
+  function promptForInitials(callback) {
+    var initials = prompt('New High Score! Enter your initials (max 5 characters):');
+    if (initials !== null) {
+      // Limit to 5 Unicode characters
+      initials = initials.substring(0, 5);
+    } else {
+      initials = '';
+    }
+    callback(initials);
+  }
 
   // Creates the canvas
   function setupCanvas(parent) {
@@ -221,6 +294,11 @@ body {
     var title = titleScreen.querySelector('h1');
     title.style.fontSize = (48 * scaleFactor) + 'px';
     
+    var titleHighScore = document.getElementById('titleHighScore');
+    titleHighScore.style.fontSize = (16 * scaleFactor) + 'px';
+    document.getElementById('titleHighScoreValue').style.fontSize = (24 * scaleFactor) + 'px';
+    document.getElementById('titleHighScoreInitials').style.fontSize = (14 * scaleFactor) + 'px';
+    
     var startButton = document.getElementById('startButton');
     var instructionsButton = document.getElementById('instructionsButton');
     startButton.style.fontSize = (24 * scaleFactor) + 'px';
@@ -242,11 +320,28 @@ body {
     var gameOverTitle = gameOverScreen.querySelector('h1');
     var finalScoreText = gameOverScreen.querySelector('div');
     var finalScoreNumber = document.getElementById('finalScore');
+    var newHighScoreMessage = document.getElementById('newHighScoreMessage');
+    var gameOverHighScore = document.getElementById('gameOverHighScore');
     var restartButton = document.getElementById('restartButton');
     
     gameOverTitle.style.fontSize = (28 * scaleFactor) + 'px';
-    finalScoreText.style.fontSize = (18 * scaleFactor) + 'px';
-    finalScoreNumber.style.fontSize = (36 * scaleFactor) + 'px';
+    finalScoreText.style.fontSize = (16 * scaleFactor) + 'px';
+    finalScoreNumber.style.fontSize = (32 * scaleFactor) + 'px';
+    newHighScoreMessage.style.fontSize = (16 * scaleFactor) + 'px';
+    gameOverHighScore.style.fontSize = (14 * scaleFactor) + 'px';
+    
+    // Scale individual score entries in the high scores list
+    var scoreEntries = gameOverHighScore.querySelectorAll('p');
+    for (var i = 0; i < scoreEntries.length; i++) {
+      if (i === 0) {
+        // Title "High Scores"
+        scoreEntries[i].style.fontSize = (14 * scaleFactor) + 'px';
+      } else {
+        // Individual score entries
+        scoreEntries[i].style.fontSize = (12 * scaleFactor) + 'px';
+      }
+    }
+    
     restartButton.style.fontSize = (20 * scaleFactor) + 'px';
     restartButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
   }
@@ -628,9 +723,44 @@ body {
   
   function showTitleScreen(game) {
     game.state = 'title';
+    updateHighScoreDisplay();
     document.getElementById('titleScreen').style.display = 'flex';
     document.getElementById('instructionsScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
+  }
+  
+  function updateHighScoreDisplay() {
+    var topScore = getTopScore();
+    
+    // Update title screen (only top score)
+    document.getElementById('titleHighScoreValue').textContent = topScore.score;
+    document.getElementById('titleHighScoreInitials').textContent = topScore.initials;
+    
+    // Update game over screen with top 5 scores
+    updateGameOverScoresList();
+  }
+  
+  function updateGameOverScoresList(highlightScore) {
+    var scores = getHighScores();
+    var gameOverHighScore = document.getElementById('gameOverHighScore');
+    
+    if (scores.length === 0) {
+      gameOverHighScore.innerHTML = '<p style="margin: 0;">No High Scores Yet</p>';
+      return;
+    }
+    
+    var html = '<p style="margin: 0; margin-bottom: 10px;">High Scores</p>';
+    for (var i = 0; i < scores.length; i++) {
+      var score = scores[i];
+      var initialsText = score.initials ? ' - ' + score.initials : '';
+      var isHighlighted = highlightScore !== undefined && score.score === highlightScore;
+      var style = isHighlighted ? 
+        'margin: 2px 0; color: #00FF00; font-weight: bold;' : 
+        'margin: 2px 0;';
+      html += '<p style="' + style + '">' + (i + 1) + '. ' + score.score + initialsText + '</p>';
+    }
+    
+    gameOverHighScore.innerHTML = html;
   }
   
   function showGameOver(game) {
@@ -638,6 +768,24 @@ body {
     
     // Update final score display
     document.getElementById('finalScore').textContent = game.score;
+    
+    // Check for new high score
+    if (isNewHighScore(game.score)) {
+      document.getElementById('newHighScoreMessage').style.display = 'block';
+      
+      // Prompt for initials and save
+      promptForInitials(function(initials) {
+        saveHighScore(game.score, initials);
+        updateHighScoreDisplay();
+        // Highlight the player's new score in the list
+        updateGameOverScoresList(game.score);
+      });
+    } else {
+      document.getElementById('newHighScoreMessage').style.display = 'none';
+      updateHighScoreDisplay();
+      // Don't highlight any score if it's not a high score
+      updateGameOverScoresList();
+    }
     
     // Show game over screen
     document.getElementById('titleScreen').style.display = 'none';
@@ -651,6 +799,9 @@ body {
 
   var canvas = setupCanvas(el);
   var game = newGame();
+  
+  // Initialize high score display
+  updateHighScoreDisplay();
   
   setupEventHandlers(game);
   
