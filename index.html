@@ -100,16 +100,39 @@ body {
 </body>
 <script>
 (function(root, el){
+  // Original game dimensions for scaling reference
+  var ORIGINAL_WIDTH = 500;
+  var ORIGINAL_HEIGHT = 200;
+  
   var GRAVITY_FAC = 18;
   var GRAVITY = 12 * GRAVITY_FAC;
   var JUMP_VEL = - 10 * GRAVITY_FAC;
   var MAX_UPWARD_VEL = - 7 * GRAVITY_FAC;
-  var PIPE_WID = 20;
-  var PIPE_PAD = PIPE_WID * 4;
+  var PIPE_WID = 50;
+  var PIPE_PAD = PIPE_WID * 3;
   var TOP = 0;
-  var BOTTOM = 200;
+  var BOTTOM = window.innerHeight; // Use full viewport height
   var PIPE_BUF = 20;
   var RENDER_X = 60;
+  
+  // Scaling factors
+  var SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
+  var SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
+  
+  // Update scaling and bounds when window resizes
+  function updateGameBounds() {
+    BOTTOM = window.innerHeight;
+    SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
+    SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
+  }
+  
+  // Helper function to get scaled hero size
+  function getScaledHeroSize() {
+    return {
+      width: 15 * SCALE_X * 2, // Make hero twice as big
+      height: 10 * SCALE_Y * 2 // Make hero twice as big
+    };
+  }
 
   // Audio context for sound effects
   var audioContext = null;
@@ -248,32 +271,27 @@ body {
     var canvas = document.createElement('canvas');
     canvas.id = 'gameCanvas';
     canvas.style.cursor = 'none';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.zIndex = '1';
     
-    // Calculate size maintaining 5:2 aspect ratio (500:200)
+    // Make canvas fullscreen
     function resizeCanvas() {
       var windowWidth = window.innerWidth;
       var windowHeight = window.innerHeight;
-      var aspectRatio = 500 / 200; // 2.5
       
-      var canvasWidth, canvasHeight;
+      // Set canvas to full viewport size
+      canvas.width = windowWidth;
+      canvas.height = windowHeight;
+      canvas.style.width = windowWidth + 'px';
+      canvas.style.height = windowHeight + 'px';
       
-      if (windowWidth / windowHeight > aspectRatio) {
-        // Window is wider than our aspect ratio
-        canvasHeight = windowHeight * 0.9; // 90% of window height
-        canvasWidth = canvasHeight * aspectRatio;
-      } else {
-        // Window is taller than our aspect ratio
-        canvasWidth = windowWidth * 0.9; // 90% of window width
-        canvasHeight = canvasWidth / aspectRatio;
-      }
-      
-      canvas.width = 500; // Keep internal resolution
-      canvas.height = 200;
-      canvas.style.width = canvasWidth + 'px';
-      canvas.style.height = canvasHeight + 'px';
+      // Update game bounds
+      updateGameBounds();
       
       // Update overlay sizes to match canvas
-      updateOverlaySizes(canvasWidth, canvasHeight);
+      updateOverlaySizes(windowWidth, windowHeight);
     }
     
     resizeCanvas();
@@ -342,24 +360,29 @@ body {
   }
   // generates a new pipe at a point after the last active pipe
   function newPipes(game) {
+    var scaledPipeWidth = PIPE_WID * SCALE_X;
+    var scaledPipePad = PIPE_PAD * SCALE_X;
+    
     var holeSize = {
-      width: PIPE_WID,
-      height: game.hero.size.height * 6
+      width: scaledPipeWidth,
+      height: game.hero.size.height * 2.5
     };
 
     var minHole = holeSize.height;
     var maxHole = BOTTOM - holeSize.height;
     var hole;
     
-    // Prevent same gap position twice in a row
+    // Prevent same gap position twice in a row (max 5 iterations)
+    var iterations = 0;
     do {
       hole = Math.floor(Math.random() * (maxHole - minHole)) + minHole;
-    } while (game.lastHole && Math.abs(hole - game.lastHole) < holeSize.height * 0.5);
+      iterations++;
+    } while (game.lastHole && Math.abs(hole - game.lastHole) < holeSize.height * 0.5 && iterations < 5);
     
     game.lastHole = hole;
 
     var lastPipe = game.pipes[game.pipes.length - 1];
-    var x = lastPipe ? lastPipe.pos.x + PIPE_PAD : 150;
+    var x = lastPipe ? lastPipe.pos.x + scaledPipePad : 150 * SCALE_X;
     var h2 = holeSize.height/2;
     var holePts = [hole - h2, hole + h2];
 
@@ -369,7 +392,7 @@ body {
         y: TOP
       },
       size: {
-        width: PIPE_WID,
+        width: scaledPipeWidth,
         height: (hole - h2)
       },
       passed: false
@@ -380,7 +403,7 @@ body {
         y: hole + h2
       },
       size: {
-        width: PIPE_WID,
+        width: scaledPipeWidth,
         height: (BOTTOM - (hole + h2))
       },
       passed: false
@@ -392,12 +415,14 @@ body {
   function generateClouds() {
     var clouds = [];
     var numClouds = 8;
+    var viewportHeight = window.innerHeight;
+    var viewportWidth = window.innerWidth;
     
     for (var i = 0; i < numClouds; i++) {
       clouds.push({
-        x: Math.random() * 800 - 100, // Start some clouds off-screen
-        y: Math.random() * 80 + 10, // Upper portion of screen
-        size: Math.random() * 30 + 15, // Size between 15-45
+        x: Math.random() * (viewportWidth + 200 * SCALE_X) - 100 * SCALE_X, // Start some clouds off-screen
+        y: Math.random() * (viewportHeight * 0.4) + 10 * SCALE_Y, // Upper portion of screen
+        size: (Math.random() * 30 + 15) * Math.min(SCALE_X, SCALE_Y), // Size scales with viewport
         speed: Math.random() * 0.3 + 0.1, // Speed between 0.1-0.4
         opacity: Math.random() * 0.4 + 0.3 // Opacity between 0.3-0.7
       });
@@ -410,13 +435,13 @@ body {
     var game = {
       hero: {
         pos: {
-          x: 20, y: 20
+          x: 20 * SCALE_X, y: 20 * SCALE_Y
         },
         size: {
-          width: 15, height: 10
+          width: 15 * SCALE_X * 2, height: 10 * SCALE_Y * 2
         },
         vel: {
-          x: 50, y: 0
+          x: 50 * SCALE_X, y: 0
         }
       },
       pipes: [ ],
@@ -473,10 +498,10 @@ body {
       cloud.x -= heroSpeed * cloud.speed;
       
       // Reset cloud position if it goes off screen
-      if (cloud.x < -cloud.size - 50) {
-        cloud.x = 500 + Math.random() * 100;
-        cloud.y = Math.random() * 80 + 10;
-        cloud.size = Math.random() * 30 + 15;
+      if (cloud.x < -cloud.size - 50 * SCALE_X) {
+        cloud.x = window.innerWidth + Math.random() * 100 * SCALE_X;
+        cloud.y = Math.random() * (window.innerHeight * 0.4) + 10 * SCALE_Y;
+        cloud.size = (Math.random() * 30 + 15) * Math.min(SCALE_X, SCALE_Y);
         cloud.speed = Math.random() * 0.3 + 0.1;
         cloud.opacity = Math.random() * 0.4 + 0.3;
       }
@@ -516,7 +541,7 @@ body {
 
   function cleanupPipes(game) {
     while(game.pipes.length > 0 && 
-      game.pipes[0].pos.x + game.pipes[0].size.width + RENDER_X < 
+      game.pipes[0].pos.x + game.pipes[0].size.width + RENDER_X * SCALE_X < 
         game.hero.pos.x - game.hero.size.width) {
       game.pipes.shift();
     }
@@ -595,7 +620,7 @@ body {
   }
 
   function drawHero(cxt, hero) {
-    var x = RENDER_X;
+    var x = RENDER_X * SCALE_X;
     var y = hero.pos.y;
     var w = hero.size.width;
     var h = hero.size.height;
@@ -672,35 +697,37 @@ body {
   }
   
   function drawPipe(cxt, pipe, adjX) {
-    var x = pipe.pos.x - (adjX - RENDER_X);
+    var x = pipe.pos.x - (adjX - RENDER_X * SCALE_X);
     var y = pipe.pos.y;
     var w = pipe.size.width;
     var h = pipe.size.height;
     
+    // Extend pipes to full viewport height
+    var isTopPipe = y === 0;
+    var drawY = isTopPipe ? 0 : y;
+    var drawHeight = isTopPipe ? y + h : window.innerHeight - y;
+    
     // Main pipe body (darker green)
     cxt.fillStyle = '#228B22'; // Forest green
-    cxt.fillRect(x + 2, y, w - 4, h);
+    cxt.fillRect(x + 2, drawY, w - 4, drawHeight);
     
-    // Pipe cap (wider section at the end)
-    var capHeight = Math.min(8, h * 0.2);
+    // Pipe cap (wider section at the gap)
+    var capHeight = Math.min(20, h * 0.2);
     var capWidth = w + 4;
     var capX = x - 2;
-    
-    // Determine if this is a top pipe or bottom pipe based on position
-    var isTopPipe = y === 0;
     var capY = isTopPipe ? y + h - capHeight : y;
     
-    // Draw pipe cap
+    // Draw pipe cap only at the gap
     cxt.fillStyle = '#32CD32'; // Lime green
     cxt.fillRect(capX, capY, capWidth, capHeight);
     
     // Add highlight on the left side of pipe
     cxt.fillStyle = '#90EE90'; // Light green
-    cxt.fillRect(x + 2, y, 2, h);
+    cxt.fillRect(x + 2, drawY, 2, drawHeight);
     
     // Add shadow on the right side of pipe
     cxt.fillStyle = '#006400'; // Dark green
-    cxt.fillRect(x + w - 4, y, 2, h);
+    cxt.fillRect(x + w - 4, drawY, 2, drawHeight);
     
     // Add highlight on pipe cap
     cxt.fillStyle = '#98FB98'; // Pale green
@@ -726,8 +753,8 @@ body {
 
       // Draw score
       cxt.fillStyle = 'black';
-      cxt.font = '24px Arial';
-      cxt.fillText('Score: ' + game.score, 10, 30);
+      cxt.font = (24 * Math.min(SCALE_X, SCALE_Y)) + 'px Arial';
+      cxt.fillText('Score: ' + game.score, 10 * SCALE_X, 30 * SCALE_Y);
     }
   }
 
@@ -764,13 +791,7 @@ body {
   }
 
 
-  function showCanvasBorder() {
-    document.getElementById('gameCanvas').style.border = '2px solid #333';
-  }
-  
-  function hideCanvasBorder() {
-    document.getElementById('gameCanvas').style.border = 'none';
-  }
+  // Remove border functions - canvas is now fullscreen
   
   function startGame(game) {
     game.state = 'playing';
@@ -779,15 +800,15 @@ body {
     game.score = 0;
     game.pipes = [];
     game.clouds = generateClouds(); // Regenerate clouds for new game
-    game.hero.pos = {x: 20, y: 20};
-    game.hero.vel = {x: 50, y: 0};
+    game.hero.pos = {x: 20 * SCALE_X, y: 20 * SCALE_Y};
+    game.hero.size = getScaledHeroSize(); // Update hero size for current scale
+    game.hero.vel = {x: 50 * SCALE_X, y: 0};
     game.lastHole = null;
     
-    // Hide all overlays and show canvas border
+    // Hide all overlays
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
-    showCanvasBorder();
     
     initAudio();
   }
@@ -797,7 +818,6 @@ body {
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'flex';
     document.getElementById('gameOverScreen').style.display = 'none';
-    hideCanvasBorder();
   }
   
   function showTitleScreen(game) {
@@ -806,7 +826,6 @@ body {
     document.getElementById('titleScreen').style.display = 'flex';
     document.getElementById('instructionsScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'none';
-    hideCanvasBorder();
   }
   
   function updateHighScoreDisplay() {
@@ -885,11 +904,10 @@ body {
       updateGameOverScoresList(game.score, '');
     }
     
-    // Show game over screen and hide canvas border
+    // Show game over screen
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'none';
     document.getElementById('gameOverScreen').style.display = 'flex';
-    hideCanvasBorder();
   }
 
   function enableStartButton(game) {
