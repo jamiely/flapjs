@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <style>
 body {
   margin: 0;
@@ -88,13 +89,9 @@ body {
   
   <!-- Game Over Overlay -->
   <div id="gameOverScreen" class="overlay">
-    <h1 style="color: #FF4444; margin-top: 0; margin-bottom: 10px; font-size: 28px; text-shadow: 2px 2px 4px #000;">Game Over</h1>
-    <div style="color: white; font-size: 16px; margin-bottom: 10px; text-align: center;">
-      <p style="margin: 0;">Final Score</p>
-      <p id="finalScore" style="font-size: 32px; margin: 5px 0; color: #FFD700; font-weight: bold;">0</p>
-      <p id="newHighScoreMessage" style="margin: 5px 0; color: #00FF00; font-weight: bold; display: none;">NEW HIGH SCORE!</p>
-    </div>
-    <div id="gameOverHighScore" style="color: white; font-size: 14px; margin-bottom: 15px; text-align: center;">
+    <h1 style="color: #FF4444; margin-top: 0; margin-bottom: 15px; font-size: 28px; text-shadow: 2px 2px 4px #000;">Game Over</h1>
+    <p id="newHighScoreMessage" style="margin: 0 0 15px 0; color: #00FF00; font-weight: bold; display: none; font-size: 18px;">NEW HIGH SCORE!</p>
+    <div id="gameOverHighScore" style="color: white; font-size: 14px; margin-bottom: 20px; text-align: center;">
       <p style="margin: 0;">High Scores</p>
     </div>
     <button id="restartButton" style="font-size: 20px; padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 120px;">Restart</button>
@@ -175,7 +172,24 @@ body {
     } catch (e) {
       console.log('Error reading high scores from localStorage');
     }
-    return [];
+    
+    // Initialize with default high scores if none exist
+    var defaultScores = [
+      { score: 50, initials: 'ACE' },
+      { score: 40, initials: 'FLY' },
+      { score: 25, initials: 'SKY' },
+      { score: 10, initials: 'WIN' },
+      { score: 1, initials: 'TRY' }
+    ];
+    
+    // Save the default scores to localStorage
+    try {
+      localStorage.setItem('flapjs_highscores', JSON.stringify(defaultScores));
+    } catch (e) {
+      console.log('Error saving default high scores to localStorage');
+    }
+    
+    return defaultScores;
   }
   
   function getTopScore() {
@@ -303,16 +317,12 @@ body {
     
     // Scale game over screen
     var gameOverTitle = gameOverScreen.querySelector('h1');
-    var finalScoreText = gameOverScreen.querySelector('div');
-    var finalScoreNumber = document.getElementById('finalScore');
     var newHighScoreMessage = document.getElementById('newHighScoreMessage');
     var gameOverHighScore = document.getElementById('gameOverHighScore');
     var restartButton = document.getElementById('restartButton');
     
     gameOverTitle.style.fontSize = (28 * scaleFactor) + 'px';
-    finalScoreText.style.fontSize = (16 * scaleFactor) + 'px';
-    finalScoreNumber.style.fontSize = (32 * scaleFactor) + 'px';
-    newHighScoreMessage.style.fontSize = (16 * scaleFactor) + 'px';
+    newHighScoreMessage.style.fontSize = (18 * scaleFactor) + 'px';
     gameOverHighScore.style.fontSize = (14 * scaleFactor) + 'px';
     
     // Scale individual score entries in the high scores list
@@ -732,11 +742,10 @@ body {
     document.getElementById('titleHighScoreValue').textContent = topScore.score;
     document.getElementById('titleHighScoreInitials').textContent = topScore.initials;
     
-    // Update game over screen with top 5 scores
-    updateGameOverScoresList();
+    // Game over screen will be updated separately with player context
   }
   
-  function updateGameOverScoresList(highlightScore) {
+  function updateGameOverScoresList(playerScore, playerInitials) {
     var scores = getHighScores();
     var gameOverHighScore = document.getElementById('gameOverHighScore');
     
@@ -746,14 +755,36 @@ body {
     }
     
     var html = '<p style="margin: 0; margin-bottom: 10px;">High Scores</p>';
+    var playerMadeList = false;
+    
+    // Check if player made it onto the high score list
+    for (var i = 0; i < scores.length; i++) {
+      if (scores[i].score === playerScore && scores[i].initials === playerInitials) {
+        playerMadeList = true;
+        break;
+      }
+    }
+    
+    // Display the high score list
     for (var i = 0; i < scores.length; i++) {
       var score = scores[i];
       var initialsText = score.initials ? ' - ' + score.initials : '';
-      var isHighlighted = highlightScore !== undefined && score.score === highlightScore;
-      var style = isHighlighted ? 
-        'margin: 2px 0; color: #00FF00; font-weight: bold;' : 
-        'margin: 2px 0;';
-      html += '<p style="' + style + '">' + (i + 1) + '. ' + score.score + initialsText + '</p>';
+      var isPlayerScore = score.score === playerScore && score.initials === playerInitials;
+      
+      if (isPlayerScore) {
+        var style = 'margin: 2px 0; color: #00FF00; font-weight: bold;';
+        var arrow = '👉 ';
+        html += '<p style="' + style + '">' + arrow + score.score + initialsText + '</p>';
+      } else {
+        var style = 'margin: 2px 0;';
+        html += '<p style="' + style + '">' + score.score + initialsText + '</p>';
+      }
+    }
+    
+    // If player didn't make the list, show ellipsis and their score
+    if (!playerMadeList) {
+      html += '<p style="margin: 2px 0; color: #666;">...</p>';
+      html += '<p style="margin: 2px 0; color: #00FF00; font-weight: bold;">👉 ' + playerScore + ' - You</p>';
     }
     
     gameOverHighScore.innerHTML = html;
@@ -761,9 +792,6 @@ body {
   
   function showGameOver(game) {
     game.state = 'gameover';
-    
-    // Update final score display
-    document.getElementById('finalScore').textContent = game.score;
     
     // Check for new high score
     if (isNewHighScore(game.score)) {
@@ -773,14 +801,14 @@ body {
       promptForInitials(function(initials) {
         saveHighScore(game.score, initials);
         updateHighScoreDisplay();
-        // Highlight the player's new score in the list
-        updateGameOverScoresList(game.score);
+        // Show the player's new score in the list
+        updateGameOverScoresList(game.score, initials);
       });
     } else {
       document.getElementById('newHighScoreMessage').style.display = 'none';
       updateHighScoreDisplay();
-      // Don't highlight any score if it's not a high score
-      updateGameOverScoresList();
+      // Show player's score below ellipsis if not a high score
+      updateGameOverScoresList(game.score, '');
     }
     
     // Show game over screen and hide canvas border
