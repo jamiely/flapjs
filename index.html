@@ -172,12 +172,16 @@
   function checkScore(game) {
     var heroRight = game.hero.pos.x + game.hero.size.width;
     
-    game.pipes.forEach(function(pipe) {
-      if (!pipe.passed && heroRight > pipe.pos.x + pipe.size.width) {
-        pipe.passed = true;
+    for (var i = 0; i < game.pipes.length; i += 2) {
+      var topPipe = game.pipes[i];
+      var bottomPipe = game.pipes[i + 1];
+      
+      if (topPipe && !topPipe.passed && heroRight > topPipe.pos.x + topPipe.size.width) {
+        topPipe.passed = true;
+        if (bottomPipe) bottomPipe.passed = true;
         game.score++;
       }
-    });
+    }
   }
 
   function handlePipes(game) {
