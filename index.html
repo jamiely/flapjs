@@ -99,6 +99,17 @@ body {
   
   <!-- Score Display -->
   <div id="scoreDisplay" style="position: fixed; top: 20px; right: 20px; z-index: 5; color: rgba(128, 128, 128, 0.5); font-family: Arial, sans-serif; font-size: 48px; font-weight: bold; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; display: none;">0</div>
+  
+  <!-- High Score Initials Input -->
+  <div id="initialsScreen" class="overlay" style="display: none; background-color: rgba(0, 0, 0, 0.9);">
+    <h1 style="color: #00FF00; margin-top: 0; margin-bottom: 20px; font-size: 32px; text-shadow: 2px 2px 4px #000;">NEW HIGH SCORE!</h1>
+    <p style="color: white; font-size: 18px; margin-bottom: 20px; text-align: center;">Enter your initials:</p>
+    <input id="initialsInput" type="text" maxlength="5" style="font-size: 24px; padding: 10px 15px; border: 2px solid #4CAF50; border-radius: 8px; text-align: center; background-color: white; color: black; font-weight: bold; width: 150px; margin-bottom: 20px;" placeholder="WIN">
+    <div>
+      <button id="submitInitials" style="font-size: 20px; padding: 12px 24px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 100px;">Submit</button>
+      <button id="skipInitials" style="font-size: 20px; padding: 12px 24px; margin: 10px; background-color: #666; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 100px;">Skip</button>
+    </div>
+  </div>
 </div>
 </body>
 <script>
@@ -294,14 +305,59 @@ body {
   }
   
   function promptForInitials(callback) {
-    var initials = prompt('New High Score! Enter your initials (max 5 characters):');
-    if (initials !== null) {
-      // Limit to 5 Unicode characters
-      initials = initials.substring(0, 5);
-    } else {
-      initials = '';
+    var initialsScreen = document.getElementById('initialsScreen');
+    var initialsInput = document.getElementById('initialsInput');
+    var submitButton = document.getElementById('submitInitials');
+    var skipButton = document.getElementById('skipInitials');
+    
+    // Clear previous input and show screen
+    initialsInput.value = '';
+    initialsScreen.style.display = 'flex';
+    
+    // Focus on input
+    setTimeout(function() {
+      initialsInput.focus();
+    }, 100);
+    
+    // Handle submit
+    function handleSubmit() {
+      var initials = initialsInput.value.trim().substring(0, 5);
+      initialsScreen.style.display = 'none';
+      callback(initials);
+      cleanup();
     }
-    callback(initials);
+    
+    // Handle skip
+    function handleSkip() {
+      initialsScreen.style.display = 'none';
+      callback('WIN');
+      cleanup();
+    }
+    
+    // Handle enter key
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleSubmit();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleSkip();
+      }
+    }
+    
+    // Cleanup function to remove event listeners
+    function cleanup() {
+      submitButton.removeEventListener('click', handleSubmit);
+      skipButton.removeEventListener('click', handleSkip);
+      initialsInput.removeEventListener('keydown', handleKeyPress);
+    }
+    
+    // Add event listeners
+    submitButton.addEventListener('click', handleSubmit);
+    skipButton.addEventListener('click', handleSkip);
+    initialsInput.addEventListener('keydown', handleKeyPress);
   }
 
   // Creates the canvas
@@ -401,6 +457,25 @@ body {
     scoreDisplay.style.fontSize = (48 * scaleFactor) + 'px';
     scoreDisplay.style.top = (20 * scaleFactor) + 'px';
     scoreDisplay.style.right = (20 * scaleFactor) + 'px';
+    
+    // Scale initials screen
+    var initialsScreen = document.getElementById('initialsScreen');
+    var initialsTitle = initialsScreen.querySelector('h1');
+    var initialsText = initialsScreen.querySelector('p');
+    var initialsInput = document.getElementById('initialsInput');
+    var submitButton = document.getElementById('submitInitials');
+    var skipButton = document.getElementById('skipInitials');
+    
+    initialsTitle.style.fontSize = (32 * scaleFactor) + 'px';
+    initialsText.style.fontSize = (18 * scaleFactor) + 'px';
+    initialsInput.style.fontSize = (24 * scaleFactor) + 'px';
+    initialsInput.style.padding = (10 * scaleFactor) + 'px ' + (15 * scaleFactor) + 'px';
+    initialsInput.style.width = (150 * scaleFactor) + 'px';
+    
+    submitButton.style.fontSize = (20 * scaleFactor) + 'px';
+    submitButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+    skipButton.style.fontSize = (20 * scaleFactor) + 'px';
+    skipButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
   }
   // generates a new pipe at a point after the last active pipe
   function newPipes(game) {
@@ -1073,6 +1148,12 @@ body {
   // Global Enter key listener for starting/restarting game
   document.addEventListener('keydown', function(evt) {
     if (evt.keyCode == 13) { // Enter key
+      // Don't handle Enter if initials screen is visible
+      var initialsScreen = document.getElementById('initialsScreen');
+      if (initialsScreen.style.display === 'flex') {
+        return;
+      }
+      
       if (game.state === 'title' || game.state === 'gameover') {
         startGame(game);
       } else if (game.state === 'instructions') {
