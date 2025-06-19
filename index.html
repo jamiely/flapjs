@@ -100,20 +100,30 @@ body {
 </body>
 <script>
 (function(root, el){
-  // Original game dimensions for scaling reference
-  var ORIGINAL_WIDTH = 500;
-  var ORIGINAL_HEIGHT = 200;
+  // Game dimensions and scaling
+  var ORIGINAL_WIDTH = 500;    // Original game width for scaling reference
+  var ORIGINAL_HEIGHT = 200;   // Original game height for scaling reference
   
-  var GRAVITY_FAC = 18;
-  var GRAVITY = 12 * GRAVITY_FAC;
-  var JUMP_VEL = - 10 * GRAVITY_FAC;
-  var MAX_UPWARD_VEL = - 7 * GRAVITY_FAC;
-  var PIPE_WID = 50;
-  var PIPE_PAD = PIPE_WID * 3;
-  var TOP = 0;
-  var BOTTOM = window.innerHeight; // Use full viewport height
-  var PIPE_BUF = 20;
-  var RENDER_X = 60;
+  // Physics constants
+  var GRAVITY_FAC = 15;                    // Gravity multiplier factor
+  var GRAVITY = 20 * GRAVITY_FAC;          // Downward acceleration force
+  var JUMP_VEL = - 10 * GRAVITY_FAC;       // Upward velocity when jumping/flapping
+  var MAX_UPWARD_VEL = - 10 * GRAVITY_FAC;  // Maximum upward velocity limit
+  var HERO_SPEED = 80;                     // Hero's constant horizontal velocity
+  
+  // Pipe configuration
+  var PIPE_WID = 50;           // Width of each pipe
+  var PIPE_PAD = PIPE_WID * 4; // Horizontal spacing between pipes
+  var PIPE_BUF = 20;           // Maximum number of pipes to maintain
+  var PIPE_START_X = 200;      // Minimum distance pipes must spawn ahead of hero
+  
+  // Rendering and boundaries
+  var TOP = 0;                           // Top boundary of game area
+  var BOTTOM = window.innerHeight;       // Bottom boundary (full viewport height)
+  var RENDER_X = 60;                     // Fixed x position where hero is rendered
+  
+  // Input throttling
+  var jumpRequested = false;             // Flag to throttle jump input to animation frames
   
   // Scaling factors
   var SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
@@ -382,7 +392,13 @@ body {
     game.lastHole = hole;
 
     var lastPipe = game.pipes[game.pipes.length - 1];
-    var x = lastPipe ? lastPipe.pos.x + scaledPipePad : 150 * SCALE_X;
+    var minX = game.hero.pos.x + PIPE_START_X * SCALE_X;
+    var x = lastPipe ? lastPipe.pos.x + scaledPipePad : minX;
+    
+    // Ensure new pipe is at least PIPE_START_X distance ahead of hero
+    if (x < minX) {
+      x = minX;
+    }
     var h2 = holeSize.height/2;
     var holePts = [hole - h2, hole + h2];
 
@@ -441,7 +457,7 @@ body {
           width: 15 * SCALE_X * 2, height: 10 * SCALE_Y * 2
         },
         vel: {
-          x: 50 * SCALE_X, y: 0
+          x: HERO_SPEED * SCALE_X, y: 0
         }
       },
       pipes: [ ],
@@ -526,6 +542,14 @@ body {
       return;
     }
 
+    // Process jump request if one is pending
+    if (jumpRequested && !game.isGameOver) {
+      game.hero.vel.y = JUMP_VEL;
+      
+      playBounceSound();
+      jumpRequested = false; // Reset the jump request
+    }
+
     var dAcel = {
       x: 0,
       y: GRAVITY * delta
@@ -536,6 +560,9 @@ body {
     };
     addToPt(game.hero.pos, dPt);
     addToPt(game.hero.vel, dAcel);
+    
+    // Keep horizontal velocity constant
+    game.hero.vel.x = HERO_SPEED * SCALE_X;
     handlePipes(game);
   }
 
@@ -766,11 +793,7 @@ body {
         if (evt.keyCode == 80) { // P key
           game.pause = ! game.pause;
         } else if(evt.keyCode == 32 && !game.isGameOver) { // space
-          game.hero.vel.y += JUMP_VEL;
-          if (game.hero.vel.y < MAX_UPWARD_VEL) {
-            game.hero.vel.y = MAX_UPWARD_VEL;
-          }
-          playBounceSound();
+          jumpRequested = true; // Request a jump on next animation frame
         }
       }
     });
@@ -802,7 +825,7 @@ body {
     game.clouds = generateClouds(); // Regenerate clouds for new game
     game.hero.pos = {x: 20 * SCALE_X, y: 20 * SCALE_Y};
     game.hero.size = getScaledHeroSize(); // Update hero size for current scale
-    game.hero.vel = {x: 50 * SCALE_X, y: 0};
+    game.hero.vel = {x: HERO_SPEED * SCALE_X, y: 0};
     game.lastHole = null;
     
     // Hide all overlays
