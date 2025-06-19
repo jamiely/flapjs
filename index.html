@@ -96,6 +96,9 @@ body {
     </div>
     <button id="restartButton" style="font-size: 20px; padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 120px;">Restart</button>
   </div>
+  
+  <!-- Score Display -->
+  <div id="scoreDisplay" style="position: fixed; top: 20px; right: 20px; z-index: 5; color: rgba(128, 128, 128, 0.5); font-family: Arial, sans-serif; font-size: 48px; font-weight: bold; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; display: none;">0</div>
 </div>
 </body>
 <script>
@@ -130,10 +133,36 @@ body {
   var SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
   
   // Update scaling and bounds when window resizes
-  function updateGameBounds() {
+  function updateGameBounds(game) {
+    var oldScaleX = SCALE_X;
+    var oldScaleY = SCALE_Y;
+    
     BOTTOM = window.innerHeight;
     SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
     SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
+    
+    // Update game elements if game exists
+    if (game) {
+      // Update hero size and position scaling
+      game.hero.size = getScaledHeroSize();
+      game.hero.vel.x = HERO_SPEED * SCALE_X; // Update horizontal velocity
+      
+      // Update existing pipes with new scaling
+      var scaleRatioX = SCALE_X / oldScaleX;
+      var scaleRatioY = SCALE_Y / oldScaleY;
+      
+      for (var i = 0; i < game.pipes.length; i++) {
+        var pipe = game.pipes[i];
+        // Scale pipe position and size
+        pipe.pos.x *= scaleRatioX;
+        pipe.pos.y *= scaleRatioY;
+        pipe.size.width *= scaleRatioX;
+        pipe.size.height *= scaleRatioY;
+      }
+      
+      // Regenerate clouds with new scaling
+      game.clouds = generateClouds();
+    }
   }
   
   // Helper function to get scaled hero size
@@ -298,7 +327,7 @@ body {
       canvas.style.height = windowHeight + 'px';
       
       // Update game bounds
-      updateGameBounds();
+      updateGameBounds(game);
       
       // Update overlay sizes to match canvas
       updateOverlaySizes(windowWidth, windowHeight);
@@ -367,6 +396,12 @@ body {
     
     restartButton.style.fontSize = (20 * scaleFactor) + 'px';
     restartButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+    
+    // Scale score display
+    var scoreDisplay = document.getElementById('scoreDisplay');
+    scoreDisplay.style.fontSize = (48 * scaleFactor) + 'px';
+    scoreDisplay.style.top = (20 * scaleFactor) + 'px';
+    scoreDisplay.style.right = (20 * scaleFactor) + 'px';
   }
   // generates a new pipe at a point after the last active pipe
   function newPipes(game) {
@@ -837,10 +872,13 @@ body {
         drawPipe(cxt, pipe, game.hero.pos.x);
       });
 
-      // Draw score
-      cxt.fillStyle = 'black';
-      cxt.font = (24 * Math.min(SCALE_X, SCALE_Y)) + 'px Arial';
-      cxt.fillText('Score: ' + game.score, 10 * SCALE_X, 30 * SCALE_Y);
+      // Update score display
+      var scoreElement = document.getElementById('scoreDisplay');
+      scoreElement.textContent = game.score;
+      scoreElement.style.display = 'block';
+    } else {
+      // Hide score when not playing
+      document.getElementById('scoreDisplay').style.display = 'none';
     }
   }
 
@@ -996,8 +1034,12 @@ body {
     showGameOver(game);
   }
 
+  var game; // Global reference for resize handler
   var canvas = setupCanvas(el);
-  var game = newGame();
+  game = newGame();
+  
+  // Initial scaling update
+  updateGameBounds(game);
   
   // Initialize high score display
   updateHighScoreDisplay();
