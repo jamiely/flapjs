@@ -50,6 +50,12 @@ body {
   display: none;
   align-items: flex-start;
 }
+
+#gameOverScreen {
+  /* Size will be set dynamically */
+  background-color: rgba(0, 0, 0, 0.9);
+  display: none;
+}
 </style>
 </head>
 <body>
@@ -74,6 +80,16 @@ body {
     <div style="align-self: center; margin-top: 20px;">
       <button id="backButton" style="font-size: 18px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer;">Back</button>
     </div>
+  </div>
+  
+  <!-- Game Over Overlay -->
+  <div id="gameOverScreen" class="overlay">
+    <h1 style="color: #FF4444; margin-top: 0; margin-bottom: 10px; font-size: 28px; text-shadow: 2px 2px 4px #000;">Game Over</h1>
+    <div style="color: white; font-size: 18px; margin-bottom: 15px; text-align: center;">
+      <p style="margin: 0;">Final Score</p>
+      <p id="finalScore" style="font-size: 36px; margin: 5px 0; color: #FFD700; font-weight: bold;">0</p>
+    </div>
+    <button id="restartButton" style="font-size: 20px; padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 120px;">Restart</button>
   </div>
 </div>
 </body>
@@ -186,6 +202,7 @@ body {
   function updateOverlaySizes(canvasWidth, canvasHeight) {
     var titleScreen = document.getElementById('titleScreen');
     var instructionsScreen = document.getElementById('instructionsScreen');
+    var gameOverScreen = document.getElementById('gameOverScreen');
     
     // Scale overlays to match canvas size
     titleScreen.style.width = canvasWidth + 'px';
@@ -194,14 +211,16 @@ body {
     instructionsScreen.style.width = canvasWidth + 'px';
     instructionsScreen.style.height = canvasHeight + 'px';
     
+    gameOverScreen.style.width = canvasWidth + 'px';
+    gameOverScreen.style.height = canvasHeight + 'px';
+    
     // Scale font sizes based on canvas size
     var scaleFactor = Math.min(canvasWidth / 500, canvasHeight / 200);
     
-    // Scale title
+    // Scale title screen
     var title = titleScreen.querySelector('h1');
     title.style.fontSize = (48 * scaleFactor) + 'px';
     
-    // Scale buttons in title screen
     var startButton = document.getElementById('startButton');
     var instructionsButton = document.getElementById('instructionsButton');
     startButton.style.fontSize = (24 * scaleFactor) + 'px';
@@ -209,7 +228,7 @@ body {
     instructionsButton.style.fontSize = (24 * scaleFactor) + 'px';
     instructionsButton.style.padding = (15 * scaleFactor) + 'px ' + (30 * scaleFactor) + 'px';
     
-    // Scale instructions screen elements
+    // Scale instructions screen
     var instructionsTitle = instructionsScreen.querySelector('h2');
     var instructionsList = instructionsScreen.querySelector('ul');
     var backButton = document.getElementById('backButton');
@@ -218,6 +237,18 @@ body {
     instructionsList.style.fontSize = (16 * scaleFactor) + 'px';
     backButton.style.fontSize = (18 * scaleFactor) + 'px';
     backButton.style.padding = (10 * scaleFactor) + 'px ' + (20 * scaleFactor) + 'px';
+    
+    // Scale game over screen
+    var gameOverTitle = gameOverScreen.querySelector('h1');
+    var finalScoreText = gameOverScreen.querySelector('div');
+    var finalScoreNumber = document.getElementById('finalScore');
+    var restartButton = document.getElementById('restartButton');
+    
+    gameOverTitle.style.fontSize = (28 * scaleFactor) + 'px';
+    finalScoreText.style.fontSize = (18 * scaleFactor) + 'px';
+    finalScoreNumber.style.fontSize = (36 * scaleFactor) + 'px';
+    restartButton.style.fontSize = (20 * scaleFactor) + 'px';
+    restartButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
   }
   // generates a new pipe at a point after the last active pipe
   function newPipes(game) {
@@ -284,7 +315,7 @@ body {
       pipes: [ ],
       score: 0,
       lastHole: null,
-      state: 'title' // 'title', 'instructions', 'playing'
+      state: 'title' // 'title', 'instructions', 'playing', 'gameover'
     };
 
 
@@ -580,9 +611,10 @@ body {
     game.hero.vel = {x: 50, y: 0};
     game.lastHole = null;
     
-    // Hide overlays
+    // Hide all overlays
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'none';
     
     initAudio();
   }
@@ -591,16 +623,30 @@ body {
     game.state = 'instructions';
     document.getElementById('titleScreen').style.display = 'none';
     document.getElementById('instructionsScreen').style.display = 'flex';
+    document.getElementById('gameOverScreen').style.display = 'none';
   }
   
   function showTitleScreen(game) {
     game.state = 'title';
     document.getElementById('titleScreen').style.display = 'flex';
     document.getElementById('instructionsScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'none';
+  }
+  
+  function showGameOver(game) {
+    game.state = 'gameover';
+    
+    // Update final score display
+    document.getElementById('finalScore').textContent = game.score;
+    
+    // Show game over screen
+    document.getElementById('titleScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'flex';
   }
 
   function enableStartButton(game) {
-    showTitleScreen(game);
+    showGameOver(game);
   }
 
   var canvas = setupCanvas(el);
@@ -611,9 +657,10 @@ body {
   var startButton = document.getElementById('startButton');
   var instructionsButton = document.getElementById('instructionsButton');
   var backButton = document.getElementById('backButton');
+  var restartButton = document.getElementById('restartButton');
   
   startButton.addEventListener('click', function() {
-    if (game.state === 'title' || game.isGameOver) {
+    if (game.state === 'title') {
       startGame(game);
     } else if (game.state === 'instructions') {
       showTitleScreen(game);
@@ -628,10 +675,14 @@ body {
     showTitleScreen(game);
   });
   
+  restartButton.addEventListener('click', function() {
+    startGame(game);
+  });
+  
   // Global Enter key listener for starting/restarting game
   document.addEventListener('keydown', function(evt) {
     if (evt.keyCode == 13) { // Enter key
-      if (game.state === 'title' || game.isGameOver) {
+      if (game.state === 'title' || game.state === 'gameover') {
         startGame(game);
       } else if (game.state === 'instructions') {
         showTitleScreen(game);
