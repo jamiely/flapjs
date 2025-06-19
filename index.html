@@ -242,15 +242,12 @@
     var w = hero.size.width;
     var h = hero.size.height;
     
-    // Calculate rotation based on velocity
-    var rotation = 0;
-    if (hero.vel.y < -50) {
-      rotation = -0.3; // Tilt up when moving up fast
-    } else if (hero.vel.y > 100) {
-      rotation = 0.5; // Tilt down when falling fast
-    } else {
-      rotation = hero.vel.y * 0.003; // Gradual tilt based on velocity
-    }
+    // Calculate rotation smoothly based on velocity
+    var maxUpwardTilt = -1.0; // Maximum upward tilt (radians)
+    var maxDownwardTilt = 1.2; // Maximum downward tilt (radians)
+    var maxVelocity = 250; // Velocity at which max tilt is reached
+    
+    var rotation = Math.max(maxUpwardTilt, Math.min(maxDownwardTilt, hero.vel.y / maxVelocity * maxDownwardTilt));
     
     // Save context and apply rotation
     cxt.save();
