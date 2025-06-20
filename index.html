@@ -908,31 +908,95 @@ body {
     var drawY = isTopPipe ? 0 : y;
     var drawHeight = isTopPipe ? y + h : window.innerHeight - y;
     
-    // Main pipe body (darker green)
-    cxt.fillStyle = '#228B22'; // Forest green
+    // Draw pipe shadow/outline
+    cxt.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    cxt.fillRect(x + 3, drawY + 2, w - 4, drawHeight);
+    
+    // Main pipe body with gradient
+    var gradient = cxt.createLinearGradient(x, 0, x + w, 0);
+    gradient.addColorStop(0, '#2E8B57'); // Sea green
+    gradient.addColorStop(0.3, '#32CD32'); // Lime green
+    gradient.addColorStop(0.7, '#228B22'); // Forest green
+    gradient.addColorStop(1, '#006400'); // Dark green
+    
+    cxt.fillStyle = gradient;
     cxt.fillRect(x + 2, drawY, w - 4, drawHeight);
     
+    // Add vertical texture lines
+    cxt.strokeStyle = 'rgba(0, 100, 0, 0.3)';
+    cxt.lineWidth = 1;
+    for (var i = 0; i < 3; i++) {
+      var lineX = x + w * (0.25 + i * 0.25);
+      cxt.beginPath();
+      cxt.moveTo(lineX, drawY);
+      cxt.lineTo(lineX, drawY + drawHeight);
+      cxt.stroke();
+    }
+    
     // Pipe cap (wider section at the gap)
-    var capHeight = Math.min(20, h * 0.2);
-    var capWidth = w + 4;
-    var capX = x - 2;
+    var capHeight = Math.min(25, h * 0.25);
+    var capWidth = w + 8;
+    var capX = x - 4;
     var capY = isTopPipe ? y + h - capHeight : y;
     
-    // Draw pipe cap only at the gap
-    cxt.fillStyle = '#32CD32'; // Lime green
+    // Draw pipe cap shadow
+    cxt.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    cxt.fillRect(capX + 2, capY + 2, capWidth, capHeight);
+    
+    // Draw pipe cap with gradient
+    var capGradient = cxt.createLinearGradient(capX, 0, capX + capWidth, 0);
+    capGradient.addColorStop(0, '#3CB371'); // Medium sea green
+    capGradient.addColorStop(0.5, '#32CD32'); // Lime green
+    capGradient.addColorStop(1, '#228B22'); // Forest green
+    
+    cxt.fillStyle = capGradient;
     cxt.fillRect(capX, capY, capWidth, capHeight);
     
-    // Add highlight on the left side of pipe
-    cxt.fillStyle = '#90EE90'; // Light green
-    cxt.fillRect(x + 2, drawY, 2, drawHeight);
+    // Add cap border
+    cxt.strokeStyle = '#006400';
+    cxt.lineWidth = 2;
+    cxt.strokeRect(capX, capY, capWidth, capHeight);
     
-    // Add shadow on the right side of pipe
-    cxt.fillStyle = '#006400'; // Dark green
-    cxt.fillRect(x + w - 4, drawY, 2, drawHeight);
+    // Add highlight on the left side of pipe body
+    var highlightGradient = cxt.createLinearGradient(x + 2, 0, x + 8, 0);
+    highlightGradient.addColorStop(0, 'rgba(144, 238, 144, 0.8)'); // Light green
+    highlightGradient.addColorStop(1, 'rgba(144, 238, 144, 0)');
+    
+    cxt.fillStyle = highlightGradient;
+    cxt.fillRect(x + 2, drawY, 6, drawHeight);
     
     // Add highlight on pipe cap
-    cxt.fillStyle = '#98FB98'; // Pale green
-    cxt.fillRect(capX, capY, 2, capHeight);
+    var capHighlightGradient = cxt.createLinearGradient(capX, 0, capX + 8, 0);
+    capHighlightGradient.addColorStop(0, 'rgba(152, 251, 152, 0.9)'); // Pale green
+    capHighlightGradient.addColorStop(1, 'rgba(152, 251, 152, 0)');
+    
+    cxt.fillStyle = capHighlightGradient;
+    cxt.fillRect(capX, capY, 8, capHeight);
+    
+    // Add rivets/bolts on the cap
+    cxt.fillStyle = '#2F4F2F'; // Dark slate gray
+    var rivetSize = Math.max(2, w * 0.08);
+    var rivetY = capY + capHeight / 2;
+    
+    // Left rivet
+    cxt.beginPath();
+    cxt.arc(capX + rivetSize + 2, rivetY, rivetSize, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right rivet
+    cxt.beginPath();
+    cxt.arc(capX + capWidth - rivetSize - 2, rivetY, rivetSize, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Add rivet highlights
+    cxt.fillStyle = '#696969'; // Dim gray
+    cxt.beginPath();
+    cxt.arc(capX + rivetSize + 2, rivetY - 1, rivetSize * 0.6, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    cxt.beginPath();
+    cxt.arc(capX + capWidth - rivetSize - 2, rivetY - 1, rivetSize * 0.6, 0, 2 * Math.PI);
+    cxt.fill();
   }
 
   function render(game, canvas) {
