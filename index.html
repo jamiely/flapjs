@@ -404,7 +404,7 @@ body {
   }
 
   // Creates the canvas
-  function setupCanvas(parent) {
+  function setupCanvas(parent, animationFunction) {
     var canvas = document.createElement('canvas');
     canvas.id = 'gameCanvas';
     canvas.style.cursor = 'none';
@@ -429,6 +429,11 @@ body {
       
       // Update overlay sizes to match canvas
       updateOverlaySizes(windowWidth, windowHeight);
+      
+      // Request a render after resize (especially important during pause)
+      if (animationFunction && animationFunction.requestRender) {
+        animationFunction.requestRender();
+      }
     }
     
     resizeCanvas();
@@ -1598,15 +1603,34 @@ body {
   
   function genRequestAnimFunction(root, game, canvas, callback) {
     var lastTimestamp = 0;
+    var needsRender = true;
+    var lastPauseState = false;
+    
     var requestAnim = function (timestamp) {
       var elapsed = timestamp - (lastTimestamp || timestamp);
       elapsed = elapsed / 1000.0;
+      
+      // Check if pause state changed
+      var pauseStateChanged = (game.pause !== lastPauseState);
+      lastPauseState = game.pause;
+      
       tick(game, elapsed);
-      render(game, canvas);
+      
+      // Only render if game is not paused, or if pause state just changed, or if we need to render
+      if (!game.pause || pauseStateChanged || needsRender) {
+        render(game, canvas);
+        needsRender = false;
+      }
+      
       lastTimestamp = timestamp;
-
       callback(requestAnim);
     };
+    
+    // Expose function to request render (for resize events)
+    requestAnim.requestRender = function() {
+      needsRender = true;
+    };
+    
     return requestAnim;
   }
 
@@ -1752,8 +1776,27 @@ body {
   }
 
   var game; // Global reference for resize handler
-  var canvas = setupCanvas(el);
+  var animationFunction; // Global reference for animation function
+  
+  // Create game first
   game = newGame();
+  
+  // Create animation function
+  if(root.requestAnimationFrame) {
+    animationFunction = genRequestAnimFunction(root, game, null, function(funRequest) {
+      root.requestAnimationFrame(funRequest);
+    });
+  }
+  
+  // Create canvas with animation function reference
+  var canvas = setupCanvas(el, animationFunction);
+  
+  // Update animation function with canvas reference
+  if (animationFunction) {
+    animationFunction = genRequestAnimFunction(root, game, canvas, function(funRequest) {
+      root.requestAnimationFrame(funRequest);
+    });
+  }
   
   // Initial scaling update
   updateGameBounds(game);
@@ -1806,11 +1849,8 @@ body {
   });
   
   // Start the animation loop
-  if(root.requestAnimationFrame) {
-    var fun = genRequestAnimFunction(root, game, canvas, function(funRequest) {
-      root.requestAnimationFrame(funRequest);
-    });
-    root.requestAnimationFrame(fun);
+  if(animationFunction) {
+    root.requestAnimationFrame(animationFunction);
   }
 
 })(window, document.getElementById('game'));
