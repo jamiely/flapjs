@@ -12,7 +12,8 @@
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_console_messages",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }
