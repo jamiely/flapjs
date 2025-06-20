@@ -1,12 +1,14 @@
 # FlapJS
 
+![Gameplay](img/gameplay-big.png)
+
 A JavaScript implementation of Flappy Bird with enhanced visuals and atmospheric effects. 
 
 Play at: http://jamiely.github.io/flapjs
 
 ## Features
 
-Originally written in a few hours on February 2, 2014 when [Flappy Bird](https://itunes.apple.com/us/app/flappy-bird/id642099621?mt=8) was the top free app in the Apple App Store. Recently enhanced with Claude to add:
+Originally written in a few hours on February 2, 2014 when [Flappy Bird](https://itunes.apple.com/us/app/flappy-bird/id642099621?mt=8) was the top free app in the Apple App Store. In 2025, enhanced with Claude to add:
 
 - **Dynamic city skyline** with varied building heights and muted color palette
 - **Atmospheric cloud system** with background and foreground layers for depth
