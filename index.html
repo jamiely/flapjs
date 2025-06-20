@@ -175,6 +175,7 @@ body {
       
       // Regenerate clouds and skyline with new scaling
       game.clouds = generateClouds();
+      game.foregroundClouds = generateForegroundClouds();
       game.skyline = generateSkyline();
     }
   }
@@ -596,6 +597,50 @@ body {
     return clouds;
   }
 
+  function generateForegroundClouds() {
+    var clouds = [];
+    var numClouds = 4; // Fewer foreground clouds to not obstruct gameplay
+    var viewportHeight = window.innerHeight;
+    var viewportWidth = window.innerWidth;
+    
+    // Use lighter colors for foreground clouds
+    var cloudColors = [
+      '#FFFFFF',  // Pure white
+      '#F8F8FF',  // Ghost white
+      '#F0F8FF',  // Alice blue
+      '#F5F5F5',  // White smoke
+      '#FFFAFA'   // Snow white
+    ];
+    
+    for (var i = 0; i < numClouds; i++) {
+      // Larger clouds for foreground to create better depth effect
+      var sizeVariation = Math.random();
+      var baseSize;
+      
+      if (sizeVariation < 0.4) {
+        // Medium clouds (40% chance)
+        baseSize = Math.random() * 60 + 40;
+      } else {
+        // Large clouds (60% chance)
+        baseSize = Math.random() * 120 + 60;
+      }
+      
+      clouds.push({
+        x: Math.random() * (viewportWidth + 300 * SCALE_X) - 150 * SCALE_X,
+        y: Math.random() * viewportHeight, // Can appear anywhere vertically
+        size: baseSize * Math.min(SCALE_X, SCALE_Y),
+        speed: Math.random() * 0.2 + 0.1, // Slower speed for foreground (0.1-0.3)
+        opacity: Math.random() * 0.1 + 0.05, // Very light opacity (0.05-0.15)
+        color: cloudColors[Math.floor(Math.random() * cloudColors.length)],
+        // Add shape variation properties
+        puffiness: Math.random() * 0.3 + 0.7, // More puffy for foreground (0.7-1.0)
+        stretch: Math.random() * 0.6 + 0.8 // More stretched (0.8-1.4)
+      });
+    }
+    
+    return clouds;
+  }
+
   function generateSkyline() {
     var buildings = [];
     var viewportWidth = window.innerWidth;
@@ -670,6 +715,7 @@ body {
       },
       pipes: [ ],
       clouds: generateClouds(),
+      foregroundClouds: generateForegroundClouds(),
       skyline: generateSkyline(),
       score: 0,
       lastHole: null,
@@ -754,6 +800,49 @@ body {
     }
   }
 
+  function updateForegroundClouds(game, delta) {
+    // Only update clouds if game is playing and not paused
+    if (game.state !== 'playing' || game.pause || game.isGameOver) {
+      return;
+    }
+    
+    // Update foreground cloud positions based on hero's movement and their own speed
+    var heroSpeed = game.hero.vel.x * delta;
+    
+    for (var i = 0; i < game.foregroundClouds.length; i++) {
+      var cloud = game.foregroundClouds[i];
+      // Move clouds relative to hero movement (parallax effect - slower for foreground)
+      cloud.x -= heroSpeed * cloud.speed;
+      
+      // Reset cloud position if it goes off screen
+      if (cloud.x < -cloud.size - 100 * SCALE_X) {
+        cloud.x = window.innerWidth + Math.random() * 200 * SCALE_X;
+        cloud.y = Math.random() * window.innerHeight;
+        
+        // Regenerate varied size for foreground
+        var sizeVariation = Math.random();
+        var baseSize;
+        if (sizeVariation < 0.4) {
+          baseSize = Math.random() * 60 + 40; // Medium clouds
+        } else {
+          baseSize = Math.random() * 120 + 60; // Large clouds
+        }
+        cloud.size = baseSize * Math.min(SCALE_X, SCALE_Y);
+        
+        cloud.speed = Math.random() * 0.2 + 0.1;
+        cloud.opacity = Math.random() * 0.1 + 0.05; // Very light opacity
+        
+        // Regenerate color and shape properties for foreground
+        var cloudColors = [
+          '#FFFFFF', '#F8F8FF', '#F0F8FF', '#F5F5F5', '#FFFAFA'
+        ];
+        cloud.color = cloudColors[Math.floor(Math.random() * cloudColors.length)];
+        cloud.puffiness = Math.random() * 0.3 + 0.7;
+        cloud.stretch = Math.random() * 0.6 + 0.8;
+      }
+    }
+  }
+
   function updateSkyline(game, delta) {
     // Only update skyline if game is playing and not paused
     if (game.state !== 'playing' || game.pause || game.isGameOver) {
@@ -827,6 +916,7 @@ body {
   function tick(game, delta) {
     // Always update clouds and skyline, even when not playing
     updateClouds(game, delta);
+    updateForegroundClouds(game, delta);
     updateSkyline(game, delta);
     
     if(game.state !== 'playing') {
@@ -1450,6 +1540,11 @@ body {
       // Hide score when not playing
       document.getElementById('scoreDisplay').style.display = 'none';
     }
+    
+    // Always draw foreground clouds last (on top of everything)
+    game.foregroundClouds.forEach(function(cloud) {
+      drawCloud(cxt, cloud);
+    });
   }
 
   function setupEventHandlers(game) {
@@ -1490,6 +1585,7 @@ body {
     game.score = 0;
     game.pipes = [];
     game.clouds = generateClouds(); // Regenerate clouds for new game
+    game.foregroundClouds = generateForegroundClouds(); // Regenerate foreground clouds for new game
     game.skyline = generateSkyline(); // Regenerate skyline for new game
     game.hero.pos = {x: 20 * SCALE_X, y: 20 * SCALE_Y};
     game.hero.size = getScaledHeroSize(); // Update hero size for current scale
