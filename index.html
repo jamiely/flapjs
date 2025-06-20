@@ -1149,62 +1149,80 @@ body {
   }
   
   function drawCloud(cxt, cloud) {
-    cxt.save();
-    cxt.globalAlpha = cloud.opacity;
-    cxt.fillStyle = cloud.color;
-    
     var x = cloud.x;
     var y = cloud.y;
     var size = cloud.size;
     var puffiness = cloud.puffiness;
     var stretch = cloud.stretch;
     
-    // Create a subtle gradient for more realistic clouds
-    var gradient = cxt.createRadialGradient(
-      x - size * 0.2, y - size * 0.2, 0,
-      x, y, size * 0.8
-    );
-    gradient.addColorStop(0, cloud.color);
-    // Make the edges slightly more transparent
-    var edgeColor = cloud.color;
-    if (cloud.color === '#FFFFFF') {
-      edgeColor = '#F0F0F0';
-    } else if (cloud.color.startsWith('#F')) {
-      // For light colors, make edges slightly darker
-      edgeColor = cloud.color.replace(/F/g, 'E');
-    }
-    gradient.addColorStop(1, edgeColor);
-    cxt.fillStyle = gradient;
+    // Create an off-screen canvas for the cloud
+    var cloudCanvas = document.createElement('canvas');
+    var cloudBounds = size * Math.max(stretch, puffiness) * 2;
+    cloudCanvas.width = cloudBounds;
+    cloudCanvas.height = cloudBounds;
+    var cloudCtx = cloudCanvas.getContext('2d');
     
-    // Draw cloud as multiple overlapping circles with more variation
-    cxt.beginPath();
+    // Offset for drawing on the cloud canvas (center the cloud)
+    var offsetX = cloudBounds / 2;
+    var offsetY = cloudBounds / 2;
     
+    // Draw cloud on off-screen canvas with solid color
+    cloudCtx.fillStyle = cloud.color;
+    
+    // Draw cloud as multiple overlapping circles
     // Main body - larger and affected by stretch
-    cxt.arc(x, y, size * 0.5 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX, offsetY, size * 0.5 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
     
     // Side puffs - affected by stretch and puffiness
-    cxt.arc(x + size * 0.4 * stretch, y, size * 0.4 * puffiness, 0, 2 * Math.PI);
-    cxt.arc(x - size * 0.4 * stretch, y, size * 0.4 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX + size * 0.4 * stretch, offsetY, size * 0.4 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
+    
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX - size * 0.4 * stretch, offsetY, size * 0.4 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
     
     // Top puffs - more varied positioning
-    cxt.arc(x + size * 0.2 * stretch, y - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
-    cxt.arc(x - size * 0.2 * stretch, y - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX + size * 0.2 * stretch, offsetY - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
+    
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX - size * 0.2 * stretch, offsetY - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
     
     // Add extra puffs for larger clouds
     if (size > 40) {
-      cxt.arc(x + size * 0.1, y + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
-      cxt.arc(x - size * 0.1, y + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX + size * 0.1, offsetY + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+      
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX - size * 0.1, offsetY + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
     }
     
     // Add even more puffs for very large clouds
     if (size > 70) {
-      cxt.arc(x + size * 0.6 * stretch, y - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
-      cxt.arc(x - size * 0.6 * stretch, y - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
-      cxt.arc(x, y - size * 0.5 * puffiness, size * 0.2 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX + size * 0.6 * stretch, offsetY - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+      
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX - size * 0.6 * stretch, offsetY - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+      
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX, offsetY - size * 0.5 * puffiness, size * 0.2 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
     }
     
-    cxt.fill();
-    
+    // Now draw the entire cloud canvas to the main canvas with opacity
+    cxt.save();
+    cxt.globalAlpha = cloud.opacity;
+    cxt.drawImage(cloudCanvas, x - offsetX, y - offsetY);
     cxt.restore();
   }
 
