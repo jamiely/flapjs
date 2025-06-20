@@ -576,16 +576,16 @@ body {
       var buildingWidth = (Math.random() * 60 + 30) * SCALE_X; // Width between 30-90 scaled pixels
       var buildingHeight = (Math.random() * 60 + 20) * SCALE_Y; // Height between 20-80 scaled pixels (smaller)
       
-      // Generate muted gray/brown colors
+      // Generate muted colors with sky blue undertones
       var colorOptions = [
-        '#3F3F3F', // Muted dark gray
-        '#4B4B4B', // Muted medium gray
-        '#5A453A', // Muted dark brown
-        '#6B5B4F', // Muted light brown
-        '#525252', // Muted gray
-        '#4A524A', // Muted olive gray
-        '#3A4A4A', // Muted slate gray
-        '#504A42'  // Muted brownish gray
+        '#3F4147', // Muted dark gray with blue undertone
+        '#4B4D52', // Muted medium gray with blue undertone
+        '#5A4741', // Muted dark brown with blue undertone
+        '#6B5D56', // Muted light brown with blue undertone
+        '#525459', // Muted gray with blue undertone
+        '#4A5451', // Muted olive gray with blue undertone
+        '#3A4C4C', // Muted slate gray with blue undertone
+        '#504C49'  // Muted brownish gray with blue undertone
       ];
       
       buildings.push({
@@ -713,16 +713,16 @@ body {
         var buildingWidth = (Math.random() * 60 + 30) * SCALE_X;
         var buildingHeight = (Math.random() * 60 + 20) * SCALE_Y;
         
-        // Generate muted gray/brown colors for new buildings
+        // Generate muted colors with sky blue undertones for new buildings
         var colorOptions = [
-          '#3F3F3F', // Muted dark gray
-          '#4B4B4B', // Muted medium gray
-          '#5A453A', // Muted dark brown
-          '#6B5B4F', // Muted light brown
-          '#525252', // Muted gray
-          '#4A524A', // Muted olive gray
-          '#3A4A4A', // Muted slate gray
-          '#504A42'  // Muted brownish gray
+          '#3F4147', // Muted dark gray with blue undertone
+          '#4B4D52', // Muted medium gray with blue undertone
+          '#5A4741', // Muted dark brown with blue undertone
+          '#6B5D56', // Muted light brown with blue undertone
+          '#525459', // Muted gray with blue undertone
+          '#4A5451', // Muted olive gray with blue undertone
+          '#3A4C4C', // Muted slate gray with blue undertone
+          '#504C49'  // Muted brownish gray with blue undertone
         ];
         
         building.x = rightmostX + (Math.random() * 20 + 5) * SCALE_X;
@@ -1128,14 +1128,14 @@ body {
     // Add some subtle building details if the building has windows
     if (building.windows && w > 20 * SCALE_X) {
       // Make windows slightly lighter than the building color
-      var windowColor = building.color === '#3F3F3F' ? '#4F4F4F' :
-                       building.color === '#4B4B4B' ? '#5B5B5B' :
-                       building.color === '#5A453A' ? '#6A554A' :
-                       building.color === '#6B5B4F' ? '#7B6B5F' :
-                       building.color === '#525252' ? '#626262' :
-                       building.color === '#4A524A' ? '#5A625A' :
-                       building.color === '#3A4A4A' ? '#4A5A5A' :
-                       '#605A52'; // Default lighter for #504A42
+      var windowColor = building.color === '#3F4147' ? '#4F5157' :
+                       building.color === '#4B4D52' ? '#5B5D62' :
+                       building.color === '#5A4741' ? '#6A5751' :
+                       building.color === '#6B5D56' ? '#7B6D66' :
+                       building.color === '#525459' ? '#626469' :
+                       building.color === '#4A5451' ? '#5A6461' :
+                       building.color === '#3A4C4C' ? '#4A5C5C' :
+                       '#605C59'; // Default lighter for #504C49
       cxt.fillStyle = windowColor;
       
       // Draw simple window grid
@@ -1158,14 +1158,14 @@ body {
       var antennaX = x + w * 0.5;
       var antennaHeight = h * 0.2;
       // Use the building color for antenna but slightly darker
-      var antennaColor = building.color === '#3F3F3F' ? '#2F2F2F' :
-                        building.color === '#4B4B4B' ? '#3B3B3B' :
-                        building.color === '#5A453A' ? '#4A352A' :
-                        building.color === '#6B5B4F' ? '#5B4B3F' :
-                        building.color === '#525252' ? '#424242' :
-                        building.color === '#4A524A' ? '#3A423A' :
-                        building.color === '#3A4A4A' ? '#2A3A3A' :
-                        '#403A32'; // Default darker for #504A42
+      var antennaColor = building.color === '#3F4147' ? '#2F3137' :
+                        building.color === '#4B4D52' ? '#3B3D42' :
+                        building.color === '#5A4741' ? '#4A3731' :
+                        building.color === '#6B5D56' ? '#5B4D46' :
+                        building.color === '#525459' ? '#424449' :
+                        building.color === '#4A5451' ? '#3A4441' :
+                        building.color === '#3A4C4C' ? '#2A3C3C' :
+                        '#403C39'; // Default darker for #504C49
       cxt.strokeStyle = antennaColor;
       cxt.lineWidth = Math.max(1, w * 0.02);
       cxt.beginPath();
