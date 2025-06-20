@@ -805,23 +805,58 @@ body {
     cxt.rotate(rotation);
     cxt.translate(-centerX, -centerY);
     
-    // Draw main body (circle with soft gradient)
-    var gradient = cxt.createRadialGradient(centerX - radius * 0.3, centerY - radius * 0.3, 0, centerX, centerY, radius);
-    gradient.addColorStop(0, '#FFF176'); // Light yellow
-    gradient.addColorStop(1, '#FFD54F'); // Golden yellow
-    cxt.fillStyle = gradient;
+    // Draw shadow
+    cxt.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    cxt.beginPath();
+    cxt.arc(centerX + 3, centerY + 3, radius * 1.1, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Draw main body with enhanced gradient
+    var bodyGradient = cxt.createRadialGradient(centerX - radius * 0.4, centerY - radius * 0.4, 0, centerX, centerY, radius * 1.2);
+    bodyGradient.addColorStop(0, '#FFF59D'); // Very light yellow
+    bodyGradient.addColorStop(0.3, '#FFEE58'); // Light yellow
+    bodyGradient.addColorStop(0.7, '#FFD54F'); // Golden yellow
+    bodyGradient.addColorStop(1, '#FFC107'); // Deep golden
+    
+    cxt.fillStyle = bodyGradient;
     cxt.beginPath();
     cxt.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Draw cheek blush
-    cxt.fillStyle = 'rgba(255, 182, 193, 0.4)'; // Light pink
+    // Add body outline
+    cxt.strokeStyle = '#FF8F00';
+    cxt.lineWidth = 2;
+    cxt.beginPath();
+    cxt.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    cxt.stroke();
+    
+    // Draw belly with gradient
+    var bellyGradient = cxt.createRadialGradient(centerX, centerY + radius * 0.3, 0, centerX, centerY + radius * 0.3, radius * 0.6);
+    bellyGradient.addColorStop(0, '#FFF8E1'); // Very light cream
+    bellyGradient.addColorStop(1, '#FFECB3'); // Light cream
+    
+    cxt.fillStyle = bellyGradient;
+    cxt.beginPath();
+    cxt.arc(centerX, centerY + radius * 0.3, radius * 0.5, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Draw cheek blush with gradient
+    var blushGradient = cxt.createRadialGradient(centerX - radius * 0.4, centerY + radius * 0.2, 0, centerX - radius * 0.4, centerY + radius * 0.2, radius * 0.25);
+    blushGradient.addColorStop(0, 'rgba(255, 182, 193, 0.6)');
+    blushGradient.addColorStop(1, 'rgba(255, 182, 193, 0.1)');
+    
+    cxt.fillStyle = blushGradient;
     cxt.beginPath();
     cxt.arc(centerX - radius * 0.4, centerY + radius * 0.2, radius * 0.2, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Draw beak (rounded triangle)
-    cxt.fillStyle = '#FF9800'; // Bright orange
+    // Draw enhanced beak with gradient and highlight
+    var beakGradient = cxt.createLinearGradient(centerX + radius * 0.6, centerY - radius * 0.15, centerX + radius * 1.1, centerY + radius * 0.15);
+    beakGradient.addColorStop(0, '#FF9800'); // Bright orange
+    beakGradient.addColorStop(0.5, '#FF7043'); // Orange-red
+    beakGradient.addColorStop(1, '#FF5722'); // Deep orange-red
+    
+    cxt.fillStyle = beakGradient;
     cxt.beginPath();
     cxt.moveTo(centerX + radius * 0.6, centerY - radius * 0.15);
     cxt.lineTo(centerX + radius * 1.1, centerY);
@@ -829,33 +864,72 @@ body {
     cxt.closePath();
     cxt.fill();
     
-    // Draw eyes (large and sparkly)
-    // Left eye white base
-    cxt.fillStyle = 'white';
+    // Add beak highlight
+    cxt.fillStyle = '#FFB74D';
+    cxt.beginPath();
+    cxt.moveTo(centerX + radius * 0.6, centerY - radius * 0.15);
+    cxt.lineTo(centerX + radius * 0.9, centerY - radius * 0.05);
+    cxt.lineTo(centerX + radius * 0.6, centerY);
+    cxt.closePath();
+    cxt.fill();
+    
+    // Draw enhanced eyes with more detail
+    // Left eye white base with gradient
+    var eyeGradient = cxt.createRadialGradient(centerX + radius * 0.2, centerY - radius * 0.25, 0, centerX + radius * 0.2, centerY - radius * 0.25, radius * 0.25);
+    eyeGradient.addColorStop(0, '#FFFFFF');
+    eyeGradient.addColorStop(1, '#F5F5F5');
+    
+    cxt.fillStyle = eyeGradient;
     cxt.beginPath();
     cxt.arc(centerX + radius * 0.2, centerY - radius * 0.25, radius * 0.25, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Left eye pupil
-    cxt.fillStyle = 'black';
+    // Left eye outline
+    cxt.strokeStyle = '#E0E0E0';
+    cxt.lineWidth = 1;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.2, centerY - radius * 0.25, radius * 0.25, 0, 2 * Math.PI);
+    cxt.stroke();
+    
+    // Left eye pupil with gradient
+    var pupilGradient = cxt.createRadialGradient(centerX + radius * 0.25, centerY - radius * 0.2, 0, centerX + radius * 0.25, centerY - radius * 0.2, radius * 0.12);
+    pupilGradient.addColorStop(0, '#1A1A1A');
+    pupilGradient.addColorStop(1, '#000000');
+    
+    cxt.fillStyle = pupilGradient;
     cxt.beginPath();
     cxt.arc(centerX + radius * 0.25, centerY - radius * 0.2, radius * 0.12, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Left eye sparkle
+    // Left eye sparkles (multiple)
     cxt.fillStyle = 'white';
     cxt.beginPath();
     cxt.arc(centerX + radius * 0.3, centerY - radius * 0.3, radius * 0.06, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Right eye white base (smaller)
-    cxt.fillStyle = 'white';
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.28, centerY - radius * 0.15, radius * 0.03, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right eye (smaller, similar treatment)
+    var rightEyeGradient = cxt.createRadialGradient(centerX + radius * 0.5, centerY - radius * 0.35, 0, centerX + radius * 0.5, centerY - radius * 0.35, radius * 0.15);
+    rightEyeGradient.addColorStop(0, '#FFFFFF');
+    rightEyeGradient.addColorStop(1, '#F5F5F5');
+    
+    cxt.fillStyle = rightEyeGradient;
     cxt.beginPath();
     cxt.arc(centerX + radius * 0.5, centerY - radius * 0.35, radius * 0.15, 0, 2 * Math.PI);
     cxt.fill();
     
+    // Right eye outline
+    cxt.strokeStyle = '#E0E0E0';
+    cxt.lineWidth = 1;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.5, centerY - radius * 0.35, radius * 0.15, 0, 2 * Math.PI);
+    cxt.stroke();
+    
     // Right eye pupil
-    cxt.fillStyle = 'black';
+    cxt.fillStyle = pupilGradient;
     cxt.beginPath();
     cxt.arc(centerX + radius * 0.52, centerY - radius * 0.32, radius * 0.08, 0, 2 * Math.PI);
     cxt.fill();
@@ -866,11 +940,56 @@ body {
     cxt.arc(centerX + radius * 0.56, centerY - radius * 0.38, radius * 0.04, 0, 2 * Math.PI);
     cxt.fill();
     
-    // Draw wing
-    cxt.fillStyle = '#FFB74D'; // Light orange
+    // Draw enhanced wing with gradient and feather details
+    var wingGradient = cxt.createLinearGradient(centerX - radius * 1.2, centerY, centerX + radius * 0.2, centerY + radius * 0.8);
+    wingGradient.addColorStop(0, '#FFB74D'); // Light orange
+    wingGradient.addColorStop(0.3, '#FF9800'); // Orange
+    wingGradient.addColorStop(0.7, '#FF7043'); // Orange-red
+    wingGradient.addColorStop(1, '#FF5722'); // Deep orange-red
+    
+    cxt.fillStyle = wingGradient;
     cxt.beginPath();
     cxt.ellipse(centerX - radius * 0.6, centerY + radius * 0.4, radius * 1.0, radius * 0.5, -0.3, 0, 2 * Math.PI);
     cxt.fill();
+    
+    // Add wing outline
+    cxt.strokeStyle = '#E65100';
+    cxt.lineWidth = 2;
+    cxt.beginPath();
+    cxt.ellipse(centerX - radius * 0.6, centerY + radius * 0.4, radius * 1.0, radius * 0.5, -0.3, 0, 2 * Math.PI);
+    cxt.stroke();
+    
+    // Add feather details on wing
+    cxt.strokeStyle = '#D84315';
+    cxt.lineWidth = 1.5;
+    for (var i = 0; i < 4; i++) {
+      var featherAngle = -0.3 + (i * 0.15);
+      var startX = centerX - radius * 0.6 + Math.cos(featherAngle) * radius * 0.5;
+      var startY = centerY + radius * 0.4 + Math.sin(featherAngle) * radius * 0.2;
+      var endX = startX + Math.cos(featherAngle) * radius * 0.6;
+      var endY = startY + Math.sin(featherAngle) * radius * 0.3;
+      
+      cxt.beginPath();
+      cxt.moveTo(startX, startY);
+      cxt.lineTo(endX, endY);
+      cxt.stroke();
+    }
+    
+    // Add small tail feathers
+    var tailGradient = cxt.createRadialGradient(centerX - radius * 0.8, centerY + radius * 0.2, 0, centerX - radius * 0.8, centerY + radius * 0.2, radius * 0.3);
+    tailGradient.addColorStop(0, '#FF7043');
+    tailGradient.addColorStop(1, '#FF5722');
+    
+    cxt.fillStyle = tailGradient;
+    for (var i = 0; i < 3; i++) {
+      var tailAngle = 0.3 + (i * 0.2);
+      var tailX = centerX - radius * 0.9 + Math.cos(tailAngle) * radius * 0.2;
+      var tailY = centerY + radius * 0.3 + Math.sin(tailAngle) * radius * 0.1;
+      
+      cxt.beginPath();
+      cxt.ellipse(tailX, tailY, radius * 0.15, radius * 0.08, tailAngle, 0, 2 * Math.PI);
+      cxt.fill();
+    }
     
     // Restore context
     cxt.restore();
