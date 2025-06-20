@@ -550,13 +550,46 @@ body {
     var viewportHeight = window.innerHeight;
     var viewportWidth = window.innerWidth;
     
+    // Define cloud color options - various shades of white and light blue
+    var cloudColors = [
+      '#FFFFFF',  // Pure white
+      '#F8F8FF',  // Ghost white
+      '#F0F8FF',  // Alice blue
+      '#E6F3FF',  // Very light blue
+      '#F5F5F5',  // White smoke
+      '#FFFAFA',  // Snow white
+      '#F0FFFF',  // Azure
+      '#E0F6FF',  // Light cyan
+      '#F7F7F7',  // Very light gray
+      '#E8F4F8'   // Very light blue-gray
+    ];
+    
     for (var i = 0; i < numClouds; i++) {
+      // Much more varied size range - from tiny to huge clouds
+      var sizeVariation = Math.random();
+      var baseSize;
+      
+      if (sizeVariation < 0.3) {
+        // Small clouds (30% chance)
+        baseSize = Math.random() * 20 + 8;
+      } else if (sizeVariation < 0.7) {
+        // Medium clouds (40% chance)
+        baseSize = Math.random() * 40 + 25;
+      } else {
+        // Large clouds (30% chance)
+        baseSize = Math.random() * 80 + 45;
+      }
+      
       clouds.push({
-        x: Math.random() * (viewportWidth + 200 * SCALE_X) - 100 * SCALE_X, // Start some clouds off-screen
-        y: Math.random() * (viewportHeight * 0.4) + 10 * SCALE_Y, // Upper portion of screen
-        size: (Math.random() * 30 + 15) * Math.min(SCALE_X, SCALE_Y), // Size scales with viewport
-        speed: Math.random() * 0.3 + 0.1, // Speed between 0.1-0.4
-        opacity: Math.random() * 0.4 + 0.3 // Opacity between 0.3-0.7
+        x: Math.random() * (viewportWidth + 200 * SCALE_X) - 100 * SCALE_X,
+        y: Math.random() * (viewportHeight * 0.5) + 10 * SCALE_Y, // Slightly more vertical range
+        size: baseSize * Math.min(SCALE_X, SCALE_Y),
+        speed: Math.random() * 0.4 + 0.05, // Varied speed between 0.05-0.45
+        opacity: Math.random() * 0.5 + 0.25, // Opacity between 0.25-0.75
+        color: cloudColors[Math.floor(Math.random() * cloudColors.length)], // Random color
+        // Add shape variation properties
+        puffiness: Math.random() * 0.5 + 0.5, // How puffy the cloud is (0.5-1.0)
+        stretch: Math.random() * 0.4 + 0.8 // Horizontal stretch factor (0.8-1.2)
       });
     }
     
@@ -676,10 +709,31 @@ body {
       // Reset cloud position if it goes off screen
       if (cloud.x < -cloud.size - 50 * SCALE_X) {
         cloud.x = window.innerWidth + Math.random() * 100 * SCALE_X;
-        cloud.y = Math.random() * (window.innerHeight * 0.4) + 10 * SCALE_Y;
-        cloud.size = (Math.random() * 30 + 15) * Math.min(SCALE_X, SCALE_Y);
-        cloud.speed = Math.random() * 0.3 + 0.1;
-        cloud.opacity = Math.random() * 0.4 + 0.3;
+        cloud.y = Math.random() * (window.innerHeight * 0.5) + 10 * SCALE_Y;
+        
+        // Regenerate varied size
+        var sizeVariation = Math.random();
+        var baseSize;
+        if (sizeVariation < 0.3) {
+          baseSize = Math.random() * 20 + 8; // Small clouds
+        } else if (sizeVariation < 0.7) {
+          baseSize = Math.random() * 40 + 25; // Medium clouds
+        } else {
+          baseSize = Math.random() * 80 + 45; // Large clouds
+        }
+        cloud.size = baseSize * Math.min(SCALE_X, SCALE_Y);
+        
+        cloud.speed = Math.random() * 0.4 + 0.05;
+        cloud.opacity = Math.random() * 0.5 + 0.25;
+        
+        // Regenerate color and shape properties
+        var cloudColors = [
+          '#FFFFFF', '#F8F8FF', '#F0F8FF', '#E6F3FF', '#F5F5F5',
+          '#FFFAFA', '#F0FFFF', '#E0F6FF', '#F7F7F7', '#E8F4F8'
+        ];
+        cloud.color = cloudColors[Math.floor(Math.random() * cloudColors.length)];
+        cloud.puffiness = Math.random() * 0.5 + 0.5;
+        cloud.stretch = Math.random() * 0.4 + 0.8;
       }
     }
   }
@@ -1097,19 +1151,58 @@ body {
   function drawCloud(cxt, cloud) {
     cxt.save();
     cxt.globalAlpha = cloud.opacity;
-    cxt.fillStyle = '#FFFFFF';
+    cxt.fillStyle = cloud.color;
     
     var x = cloud.x;
     var y = cloud.y;
     var size = cloud.size;
+    var puffiness = cloud.puffiness;
+    var stretch = cloud.stretch;
     
-    // Draw cloud as multiple overlapping circles
+    // Create a subtle gradient for more realistic clouds
+    var gradient = cxt.createRadialGradient(
+      x - size * 0.2, y - size * 0.2, 0,
+      x, y, size * 0.8
+    );
+    gradient.addColorStop(0, cloud.color);
+    // Make the edges slightly more transparent
+    var edgeColor = cloud.color;
+    if (cloud.color === '#FFFFFF') {
+      edgeColor = '#F0F0F0';
+    } else if (cloud.color.startsWith('#F')) {
+      // For light colors, make edges slightly darker
+      edgeColor = cloud.color.replace(/F/g, 'E');
+    }
+    gradient.addColorStop(1, edgeColor);
+    cxt.fillStyle = gradient;
+    
+    // Draw cloud as multiple overlapping circles with more variation
     cxt.beginPath();
-    cxt.arc(x, y, size * 0.5, 0, 2 * Math.PI);
-    cxt.arc(x + size * 0.4, y, size * 0.4, 0, 2 * Math.PI);
-    cxt.arc(x - size * 0.4, y, size * 0.4, 0, 2 * Math.PI);
-    cxt.arc(x + size * 0.2, y - size * 0.3, size * 0.35, 0, 2 * Math.PI);
-    cxt.arc(x - size * 0.2, y - size * 0.3, size * 0.35, 0, 2 * Math.PI);
+    
+    // Main body - larger and affected by stretch
+    cxt.arc(x, y, size * 0.5 * puffiness, 0, 2 * Math.PI);
+    
+    // Side puffs - affected by stretch and puffiness
+    cxt.arc(x + size * 0.4 * stretch, y, size * 0.4 * puffiness, 0, 2 * Math.PI);
+    cxt.arc(x - size * 0.4 * stretch, y, size * 0.4 * puffiness, 0, 2 * Math.PI);
+    
+    // Top puffs - more varied positioning
+    cxt.arc(x + size * 0.2 * stretch, y - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
+    cxt.arc(x - size * 0.2 * stretch, y - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
+    
+    // Add extra puffs for larger clouds
+    if (size > 40) {
+      cxt.arc(x + size * 0.1, y + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
+      cxt.arc(x - size * 0.1, y + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
+    }
+    
+    // Add even more puffs for very large clouds
+    if (size > 70) {
+      cxt.arc(x + size * 0.6 * stretch, y - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
+      cxt.arc(x - size * 0.6 * stretch, y - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
+      cxt.arc(x, y - size * 0.5 * puffiness, size * 0.2 * puffiness, 0, 2 * Math.PI);
+    }
+    
     cxt.fill();
     
     cxt.restore();
