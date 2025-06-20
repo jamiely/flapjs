@@ -138,6 +138,9 @@ body {
   // Input throttling
   var jumpRequested = false;             // Flag to throttle jump input to animation frames
   
+  // Default initials for high scores
+  var DEFAULT_INITIALS = 'WIN';
+  
   // Scaling factors
   var SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
   var SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
@@ -250,7 +253,7 @@ body {
       { score: 50, initials: 'ACE' },
       { score: 40, initials: 'FLY' },
       { score: 25, initials: 'SKY' },
-      { score: 10, initials: 'WIN' },
+      { score: 10, initials: DEFAULT_INITIALS },
       { score: 1, initials: 'TRY' }
     ];
     
@@ -322,6 +325,9 @@ body {
     // Handle submit
     function handleSubmit() {
       var initials = initialsInput.value.trim().substring(0, 5);
+      if (!initials) {
+        initials = DEFAULT_INITIALS;
+      }
       initialsScreen.style.display = 'none';
       callback(initials);
       cleanup();
@@ -330,7 +336,7 @@ body {
     // Handle skip
     function handleSkip() {
       initialsScreen.style.display = 'none';
-      callback('WIN');
+      callback(DEFAULT_INITIALS);
       cleanup();
     }
     
@@ -1042,7 +1048,7 @@ body {
     }
     
     var html = '<p style="margin: 0; margin-bottom: 15px; font-weight: bold;">High Scores</p>';
-    html += '<div style="display: grid; grid-template-columns: auto auto 1fr; gap: 0px 8px; font-family: monospace;">';
+    html += '<div style="display: grid; grid-template-columns: minmax(100px, auto) auto minmax(100px, 1fr); gap: 0px 8px; font-family: monospace;">';
     
     var playerMadeList = false;
     
@@ -1061,7 +1067,7 @@ body {
       var isPlayerScore = score.score === playerScore && score.initials === playerInitials;
       
       var rowStyle = isPlayerScore ? 
-        'color: #00FF00; font-weight: bold; background-color: rgba(0, 255, 0, 0.1); border-radius: 4px; margin: 2px 0; padding: 2px 4px;' :
+        'color: #00FF00; font-weight: bold; margin: 2px 0; padding: 2px 4px;' :
         'margin: 2px 0; padding: 2px 4px;';
       
       // Score cell (right-aligned)
@@ -1072,12 +1078,12 @@ body {
       html += '<div style="text-align: left; ' + rowStyle + '">' + initialsText + (isPlayerScore ? ' 👈' : '') + '</div>';
     }
     
-    // If player didn't make the list, show ellipsis and their score
-    if (!playerMadeList) {
+    // If player didn't make the list, show ellipsis and their score (unless score is 0)
+    if (!playerMadeList && playerScore > 0) {
       // Ellipsis row spanning all columns
       html += '<div style="grid-column: 1 / -1; text-align: center; color: #666; margin: 2px 0; padding: 2px 4px;">...</div>';
       
-      var rowStyle = 'color: #00FF00; font-weight: bold; background-color: rgba(0, 255, 0, 0.1); border-radius: 4px; margin: 2px 0; padding: 2px 4px;';
+      var rowStyle = 'color: #00FF00; font-weight: bold; margin: 2px 0; padding: 2px 4px;';
       var playerInitialsText = (playerInitials || 'You') + ' 👈';
       
       // Player score row
