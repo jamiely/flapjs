@@ -1041,7 +1041,9 @@ body {
       return;
     }
     
-    var html = '<p style="margin: 0; margin-bottom: 10px;">High Scores</p>';
+    var html = '<p style="margin: 0; margin-bottom: 15px; font-weight: bold;">High Scores</p>';
+    html += '<div style="display: grid; grid-template-columns: auto auto 1fr; gap: 0px 8px; font-family: monospace;">';
+    
     var playerMadeList = false;
     
     // Check if player made it onto the high score list
@@ -1052,28 +1054,39 @@ body {
       }
     }
     
-    // Display the high score list
+    // Display the high score list with grid layout
     for (var i = 0; i < scores.length; i++) {
       var score = scores[i];
-      var initialsText = score.initials ? ' - ' + score.initials : '';
+      var initialsText = score.initials || '';
       var isPlayerScore = score.score === playerScore && score.initials === playerInitials;
       
-      if (isPlayerScore) {
-        var style = 'margin: 2px 0; color: #00FF00; font-weight: bold;';
-        var arrow = '👉 ';
-        html += '<p style="' + style + '">' + arrow + score.score + initialsText + '</p>';
-      } else {
-        var style = 'margin: 2px 0;';
-        html += '<p style="' + style + '">' + score.score + initialsText + '</p>';
-      }
+      var rowStyle = isPlayerScore ? 
+        'color: #00FF00; font-weight: bold; background-color: rgba(0, 255, 0, 0.1); border-radius: 4px; margin: 2px 0; padding: 2px 4px;' :
+        'margin: 2px 0; padding: 2px 4px;';
+      
+      // Score cell (right-aligned)
+      html += '<div style="text-align: right; ' + rowStyle + '">' + score.score + '</div>';
+      // Dash cell (center-aligned)
+      html += '<div style="text-align: center; ' + rowStyle + '">-</div>';
+      // Initials cell (left-aligned) with emoji if player score
+      html += '<div style="text-align: left; ' + rowStyle + '">' + initialsText + (isPlayerScore ? ' 👈' : '') + '</div>';
     }
     
     // If player didn't make the list, show ellipsis and their score
     if (!playerMadeList) {
-      html += '<p style="margin: 2px 0; color: #666;">...</p>';
-      html += '<p style="margin: 2px 0; color: #00FF00; font-weight: bold;">👉 ' + playerScore + ' - You</p>';
+      // Ellipsis row spanning all columns
+      html += '<div style="grid-column: 1 / -1; text-align: center; color: #666; margin: 2px 0; padding: 2px 4px;">...</div>';
+      
+      var rowStyle = 'color: #00FF00; font-weight: bold; background-color: rgba(0, 255, 0, 0.1); border-radius: 4px; margin: 2px 0; padding: 2px 4px;';
+      var playerInitialsText = (playerInitials || 'You') + ' 👈';
+      
+      // Player score row
+      html += '<div style="text-align: right; ' + rowStyle + '">' + playerScore + '</div>';
+      html += '<div style="text-align: center; ' + rowStyle + '">-</div>';
+      html += '<div style="text-align: left; ' + rowStyle + '">' + playerInitialsText + '</div>';
     }
     
+    html += '</div>';
     gameOverHighScore.innerHTML = html;
   }
   
