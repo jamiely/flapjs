@@ -607,7 +607,23 @@ body {
     
     for (var i = 0; i < numBuildings; i++) {
       var buildingWidth = (Math.random() * 60 + 30) * SCALE_X; // Width between 30-90 scaled pixels
-      var buildingHeight = (Math.random() * 60 + 20) * SCALE_Y; // Height between 20-80 scaled pixels (smaller)
+      
+      // Create different building height categories
+      var heightVariation = Math.random();
+      var buildingHeight;
+      
+      if (heightVariation < 0.6) {
+        // Short buildings (60% chance)
+        buildingHeight = (Math.random() * 60 + 20) * SCALE_Y; // Height between 20-80 scaled pixels
+      } else if (heightVariation < 0.85) {
+        // Medium buildings (25% chance)
+        buildingHeight = (Math.random() * 120 + 80) * SCALE_Y; // Height between 80-200 scaled pixels
+      } else {
+        // Tall skyscrapers (15% chance)
+        buildingHeight = (Math.random() * 200 + 150) * SCALE_Y; // Height between 150-350 scaled pixels
+        // Make skyscrapers a bit narrower
+        buildingWidth = buildingWidth * (Math.random() * 0.4 + 0.6); // 60-100% of original width
+      }
       
       // Generate muted colors with sky blue undertones
       var colorOptions = [
@@ -765,7 +781,23 @@ body {
         var viewportHeight = window.innerHeight;
         var groundLevel = viewportHeight;
         var buildingWidth = (Math.random() * 60 + 30) * SCALE_X;
-        var buildingHeight = (Math.random() * 60 + 20) * SCALE_Y;
+        
+        // Create different building height categories (same as generateSkyline)
+        var heightVariation = Math.random();
+        var buildingHeight;
+        
+        if (heightVariation < 0.6) {
+          // Short buildings (60% chance)
+          buildingHeight = (Math.random() * 60 + 20) * SCALE_Y;
+        } else if (heightVariation < 0.85) {
+          // Medium buildings (25% chance)
+          buildingHeight = (Math.random() * 120 + 80) * SCALE_Y;
+        } else {
+          // Tall skyscrapers (15% chance)
+          buildingHeight = (Math.random() * 200 + 150) * SCALE_Y;
+          // Make skyscrapers a bit narrower
+          buildingWidth = buildingWidth * (Math.random() * 0.4 + 0.6);
+        }
         
         // Generate muted colors with sky blue undertones for new buildings
         var colorOptions = [
