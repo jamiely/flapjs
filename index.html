@@ -1051,11 +1051,13 @@ body {
     html += '<div style="display: grid; grid-template-columns: minmax(100px, auto) auto minmax(100px, 1fr); gap: 0px 8px; font-family: monospace;">';
     
     var playerMadeList = false;
+    var playerEntryIndex = -1;
     
-    // Check if player made it onto the high score list
+    // Find the most recent player entry (should be the first match since scores are sorted by score desc)
     for (var i = 0; i < scores.length; i++) {
       if (scores[i].score === playerScore && scores[i].initials === playerInitials) {
         playerMadeList = true;
+        playerEntryIndex = i;
         break;
       }
     }
@@ -1064,7 +1066,7 @@ body {
     for (var i = 0; i < scores.length; i++) {
       var score = scores[i];
       var initialsText = score.initials || '';
-      var isPlayerScore = score.score === playerScore && score.initials === playerInitials;
+      var isPlayerScore = (i === playerEntryIndex); // Only highlight the specific entry
       
       var rowStyle = isPlayerScore ? 
         'color: #00FF00; font-weight: bold; margin: 2px 0; padding: 2px 4px;' :
