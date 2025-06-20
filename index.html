@@ -173,8 +173,9 @@ body {
         pipe.size.height *= scaleRatioY;
       }
       
-      // Regenerate clouds with new scaling
+      // Regenerate clouds and skyline with new scaling
       game.clouds = generateClouds();
+      game.skyline = generateSkyline();
     }
   }
   
@@ -562,6 +563,49 @@ body {
     return clouds;
   }
 
+  function generateSkyline() {
+    var buildings = [];
+    var viewportWidth = window.innerWidth;
+    var viewportHeight = window.innerHeight;
+    var groundLevel = viewportHeight; // Buildings touch the bottom of the viewport
+    
+    var numBuildings = Math.floor(viewportWidth / (40 * SCALE_X)) + 2; // Buildings every ~40 scaled pixels
+    var currentX = -50 * SCALE_X; // Start slightly off-screen
+    
+    for (var i = 0; i < numBuildings; i++) {
+      var buildingWidth = (Math.random() * 60 + 30) * SCALE_X; // Width between 30-90 scaled pixels
+      var buildingHeight = (Math.random() * 60 + 20) * SCALE_Y; // Height between 20-80 scaled pixels (smaller)
+      
+      // Generate muted gray/brown colors
+      var colorOptions = [
+        '#3F3F3F', // Muted dark gray
+        '#4B4B4B', // Muted medium gray
+        '#5A453A', // Muted dark brown
+        '#6B5B4F', // Muted light brown
+        '#525252', // Muted gray
+        '#4A524A', // Muted olive gray
+        '#3A4A4A', // Muted slate gray
+        '#504A42'  // Muted brownish gray
+      ];
+      
+      buildings.push({
+        x: currentX,
+        y: groundLevel - buildingHeight,
+        width: buildingWidth,
+        height: buildingHeight,
+        color: colorOptions[Math.floor(Math.random() * colorOptions.length)],
+        // Add some building details
+        windows: Math.random() > 0.3, // 70% chance of having windows
+        antenna: Math.random() > 0.7, // 30% chance of having antenna
+        speed: 0.4 + Math.random() * 0.2 // Speed between 0.4-0.6 for parallax
+      });
+      
+      currentX += buildingWidth + (Math.random() * 20 + 5) * SCALE_X; // Small gap between buildings
+    }
+    
+    return buildings;
+  }
+
   function newGame() {
     var game = {
       hero: {
@@ -577,6 +621,7 @@ body {
       },
       pipes: [ ],
       clouds: generateClouds(),
+      skyline: generateSkyline(),
       score: 0,
       lastHole: null,
       state: 'title' // 'title', 'instructions', 'playing', 'gameover'
@@ -639,10 +684,64 @@ body {
     }
   }
 
+  function updateSkyline(game, delta) {
+    // Only update skyline if game is playing and not paused
+    if (game.state !== 'playing' || game.pause || game.isGameOver) {
+      return;
+    }
+    
+    // Update building positions based on hero's movement and parallax speed
+    var heroSpeed = game.hero.vel.x * delta;
+    
+    for (var i = 0; i < game.skyline.length; i++) {
+      var building = game.skyline[i];
+      // Move buildings relative to hero movement (parallax effect - slower than hero)
+      building.x -= heroSpeed * building.speed;
+      
+      // Reset building position if it goes off screen
+      if (building.x + building.width < -100 * SCALE_X) {
+        // Find the rightmost building to place new one after it
+        var rightmostX = building.x;
+        for (var j = 0; j < game.skyline.length; j++) {
+          if (game.skyline[j].x + game.skyline[j].width > rightmostX) {
+            rightmostX = game.skyline[j].x + game.skyline[j].width;
+          }
+        }
+        
+        var viewportHeight = window.innerHeight;
+        var groundLevel = viewportHeight;
+        var buildingWidth = (Math.random() * 60 + 30) * SCALE_X;
+        var buildingHeight = (Math.random() * 60 + 20) * SCALE_Y;
+        
+        // Generate muted gray/brown colors for new buildings
+        var colorOptions = [
+          '#3F3F3F', // Muted dark gray
+          '#4B4B4B', // Muted medium gray
+          '#5A453A', // Muted dark brown
+          '#6B5B4F', // Muted light brown
+          '#525252', // Muted gray
+          '#4A524A', // Muted olive gray
+          '#3A4A4A', // Muted slate gray
+          '#504A42'  // Muted brownish gray
+        ];
+        
+        building.x = rightmostX + (Math.random() * 20 + 5) * SCALE_X;
+        building.y = groundLevel - buildingHeight;
+        building.width = buildingWidth;
+        building.height = buildingHeight;
+        building.color = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+        building.windows = Math.random() > 0.3;
+        building.antenna = Math.random() > 0.7;
+        building.speed = 0.4 + Math.random() * 0.2;
+      }
+    }
+  }
+
   // tick the game by delta seconds
   function tick(game, delta) {
-    // Always update clouds, even when not playing
+    // Always update clouds and skyline, even when not playing
     updateClouds(game, delta);
+    updateSkyline(game, delta);
     
     if(game.state !== 'playing') {
       return;
@@ -1015,6 +1114,66 @@ body {
     
     cxt.restore();
   }
+
+  function drawBuilding(cxt, building) {
+    var x = building.x;
+    var y = building.y;
+    var w = building.width;
+    var h = building.height;
+    
+    // Draw building silhouette using its assigned color
+    cxt.fillStyle = building.color;
+    cxt.fillRect(x, y, w, h);
+    
+    // Add some subtle building details if the building has windows
+    if (building.windows && w > 20 * SCALE_X) {
+      // Make windows slightly lighter than the building color
+      var windowColor = building.color === '#3F3F3F' ? '#4F4F4F' :
+                       building.color === '#4B4B4B' ? '#5B5B5B' :
+                       building.color === '#5A453A' ? '#6A554A' :
+                       building.color === '#6B5B4F' ? '#7B6B5F' :
+                       building.color === '#525252' ? '#626262' :
+                       building.color === '#4A524A' ? '#5A625A' :
+                       building.color === '#3A4A4A' ? '#4A5A5A' :
+                       '#605A52'; // Default lighter for #504A42
+      cxt.fillStyle = windowColor;
+      
+      // Draw simple window grid
+      var windowSize = Math.max(2, w * 0.15);
+      var windowSpacing = windowSize * 1.5;
+      var startX = x + windowSpacing;
+      var startY = y + windowSpacing;
+      
+      for (var row = startY; row < y + h - windowSize; row += windowSpacing) {
+        for (var col = startX; col < x + w - windowSize; col += windowSpacing) {
+          // Randomly skip some windows for variety
+          if (Math.random() > 0.7) continue;
+          cxt.fillRect(col, row, windowSize * 0.6, windowSize * 0.6);
+        }
+      }
+    }
+    
+    // Add antenna if building has one
+    if (building.antenna) {
+      var antennaX = x + w * 0.5;
+      var antennaHeight = h * 0.2;
+      // Use the building color for antenna but slightly darker
+      var antennaColor = building.color === '#3F3F3F' ? '#2F2F2F' :
+                        building.color === '#4B4B4B' ? '#3B3B3B' :
+                        building.color === '#5A453A' ? '#4A352A' :
+                        building.color === '#6B5B4F' ? '#5B4B3F' :
+                        building.color === '#525252' ? '#424242' :
+                        building.color === '#4A524A' ? '#3A423A' :
+                        building.color === '#3A4A4A' ? '#2A3A3A' :
+                        '#403A32'; // Default darker for #504A42
+      cxt.strokeStyle = antennaColor;
+      cxt.lineWidth = Math.max(1, w * 0.02);
+      cxt.beginPath();
+      cxt.moveTo(antennaX, y);
+      cxt.lineTo(antennaX, y - antennaHeight);
+      cxt.stroke();
+    }
+  }
   
   function drawPipe(cxt, pipe, adjX) {
     var x = pipe.pos.x - (adjX - RENDER_X * SCALE_X);
@@ -1123,6 +1282,11 @@ body {
 
     cxt.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Always draw skyline first (background layer)
+    game.skyline.forEach(function(building) {
+      drawBuilding(cxt, building);
+    });
+    
     // Always draw clouds, regardless of game state
     game.clouds.forEach(function(cloud) {
       drawCloud(cxt, cloud);
@@ -1183,6 +1347,7 @@ body {
     game.score = 0;
     game.pipes = [];
     game.clouds = generateClouds(); // Regenerate clouds for new game
+    game.skyline = generateSkyline(); // Regenerate skyline for new game
     game.hero.pos = {x: 20 * SCALE_X, y: 20 * SCALE_Y};
     game.hero.size = getScaledHeroSize(); // Update hero size for current scale
     game.hero.vel = {x: HERO_SPEED * SCALE_X, y: 0};
