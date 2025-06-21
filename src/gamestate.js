@@ -8,6 +8,7 @@ import { isOutOfBounds, collides, addToPt } from './physics.js';
 // Creates a new game state object
 export function newGame() {
   var game = {
+    jumpRequested: false,
     hero: {
       pos: {
         x: 20 * scaling.SCALE_X, y: 20 * scaling.SCALE_Y
