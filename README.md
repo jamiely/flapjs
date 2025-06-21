@@ -33,6 +33,44 @@ To play, open `index.html` in a browser. The game works on modern browsers inclu
 - **P** - Pause/unpause game
 - **ENTER** - Start/restart game
 
+## Development
+
+### Running Tests
+
+The game includes a comprehensive test suite with 298 tests covering all modules:
+
+```bash
+# Install dependencies
+npm install
+
+# Run tests once
+npm run test:run
+
+# Run tests in watch mode (for development)
+npm test
+
+# Run tests for a specific file
+npm run test:run src/gamestate.test.js
+```
+
+### Test Coverage
+
+The project has complete test coverage for all JavaScript modules:
+
+- `animationFunction.js` - Animation loop and rendering controls
+- `config.js` - Game configuration and scaling
+- `draw.js` - Canvas rendering and drawing functions  
+- `eventHandlers.js` - Input handling (keyboard, touch, mouse)
+- `gamestate.js` - Game state management and entities
+- `physics.js` - Physics calculations and collision detection
+- `score.js` - High score management and localStorage
+- `screens.js` - Screen transitions and UI management
+- `sound.js` - Web Audio API integration
+- `tick.js` - Main game loop and state updates
+- `worldgen.js` - World generation (clouds, skyline)
+
+All tests use the Vitest framework with comprehensive mocking of DOM and external dependencies.
+
 ## Screenshots
 
 ### Title Screen
