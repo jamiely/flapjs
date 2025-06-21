@@ -12,7 +12,18 @@ Open `index.html` in a web browser. The game has been tested on Chrome, Safari, 
 
 ## Code Architecture
 
-The game is implemented as a single-file JavaScript application using an immediately invoked function expression (IIFE) pattern. All game logic is contained within `index.html` starting at line 12.
+The game has been refactored from a single-file implementation into a modular JavaScript application. The entry point is `src/main.js` which imports and calls the main `setup()` function from `src/setup.js`. The codebase is organized into the following modules:
+
+- `src/main.js`: Entry point that calls setup on DOM ready
+- `src/setup.js`: Main initialization and game setup logic
+- `src/gamestate.js`: Game state management
+- `src/tick.js`: Game loop and physics updates
+- `src/draw.js`: Canvas rendering functions
+- `src/screens.js`: Game screen management (title, instructions, game over)
+- `src/eventHandlers.js`: Input handling and event listeners
+- `src/animationFunction.js`: Animation frame management
+- `src/worldgen.js`: World generation (clouds, skyline)
+- `src/score.js`: Score tracking and high score management
 
 ### Key Components
 
