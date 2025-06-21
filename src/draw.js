@@ -1,6 +1,18 @@
 import { 
+  HERO_SPEED,
   RENDER_X,
-  scaling} from './config.js';
+  scaling,
+  updateScaling,
+} from './config.js';
+
+import {
+  generateClouds,
+  generateForegroundClouds,
+  generateSkyline,
+  updateClouds,
+  updateForegroundClouds,
+  updateSkyline,
+} from './worldgen.js';
 
 export function drawHero(cxt, hero) {
   var x = RENDER_X * scaling.SCALE_X;
@@ -489,4 +501,169 @@ export function render(game, canvas) {
   game.foregroundClouds.forEach(function(cloud) {
     drawCloud(cxt, cloud);
   });
+}
+
+// Creates the canvas
+export function setupCanvas(game, parent, animationFunction) {
+  var canvas = document.createElement('canvas');
+  canvas.id = 'gameCanvas';
+  canvas.style.cursor = 'none';
+  canvas.style.position = 'absolute';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.zIndex = '1';
+  
+  // Make canvas fullscreen
+  function resizeCanvas() {
+    var windowWidth = window.innerWidth;
+    var windowHeight = window.innerHeight;
+    
+    // Set canvas to full viewport size
+    canvas.width = windowWidth;
+    canvas.height = windowHeight;
+    canvas.style.width = windowWidth + 'px';
+    canvas.style.height = windowHeight + 'px';
+    
+    // Update game bounds
+    updateGameBounds(game);
+    
+    // Update overlay sizes to match canvas
+    updateOverlaySizes(windowWidth, windowHeight);
+    
+    // Request a render after resize (especially important during pause)
+    if (animationFunction && animationFunction.requestRender) {
+      animationFunction.requestRender();
+    }
+  }
+  
+  resizeCanvas();
+  parent.appendChild(canvas);
+  
+  // Add resize listener
+  window.addEventListener('resize', resizeCanvas);
+  
+  return canvas;
+}
+
+// Update scaling and bounds when window resizes
+export function updateGameBounds(game) {
+  var oldScaleX = scaling.SCALE_X;
+  var oldScaleY = scaling.SCALE_Y;
+  
+  // Update scaling using the config module function
+  updateScaling();
+  
+  // Update game elements if game exists
+  if (game) {
+    // Update hero size and position scaling
+    game.hero.size = getScaledHeroSize();
+    game.hero.vel.x = HERO_SPEED * scaling.SCALE_X; // Update horizontal velocity
+    
+    // Update existing pipes with new scaling
+    var scaleRatioX = scaling.SCALE_X / oldScaleX;
+    var scaleRatioY = scaling.SCALE_Y / oldScaleY;
+    
+    for (var i = 0; i < game.pipes.length; i++) {
+      var pipe = game.pipes[i];
+      // Scale pipe position and size
+      pipe.pos.x *= scaleRatioX;
+      pipe.pos.y *= scaleRatioY;
+      pipe.size.width *= scaleRatioX;
+      pipe.size.height *= scaleRatioY;
+    }
+    
+    // Regenerate clouds and skyline with new scaling
+    game.clouds = generateClouds();
+    game.foregroundClouds = generateForegroundClouds();
+    game.skyline = generateSkyline();
+  }
+}
+
+function updateOverlaySizes(canvasWidth, canvasHeight) {
+  // Overlays now take full window, but we still scale fonts based on canvas size
+  var scaleFactor = Math.min(canvasWidth / 500, canvasHeight / 200);
+  
+  // Scale title screen
+  var title = titleScreen.querySelector('h1');
+  title.style.fontSize = (48 * scaleFactor) + 'px';
+  
+  var titleHighScore = document.getElementById('titleHighScore');
+  titleHighScore.style.fontSize = (16 * scaleFactor) + 'px';
+  document.getElementById('titleHighScoreValue').style.fontSize = (24 * scaleFactor) + 'px';
+  document.getElementById('titleHighScoreInitials').style.fontSize = (14 * scaleFactor) + 'px';
+  
+  var startButton = document.getElementById('startButton');
+  var instructionsButton = document.getElementById('instructionsButton');
+  startButton.style.fontSize = (24 * scaleFactor) + 'px';
+  startButton.style.padding = (15 * scaleFactor) + 'px ' + (30 * scaleFactor) + 'px';
+  instructionsButton.style.fontSize = (24 * scaleFactor) + 'px';
+  instructionsButton.style.padding = (15 * scaleFactor) + 'px ' + (30 * scaleFactor) + 'px';
+  
+  // Scale instructions screen
+  var instructionsTitle = instructionsScreen.querySelector('h2');
+  var instructionsList = instructionsScreen.querySelector('ul');
+  var backButton = document.getElementById('backButton');
+  
+  instructionsTitle.style.fontSize = (24 * scaleFactor) + 'px';
+  instructionsList.style.fontSize = (16 * scaleFactor) + 'px';
+  backButton.style.fontSize = (18 * scaleFactor) + 'px';
+  backButton.style.padding = (10 * scaleFactor) + 'px ' + (20 * scaleFactor) + 'px';
+  
+  // Scale game over screen
+  var gameOverTitle = gameOverScreen.querySelector('h1');
+  var newHighScoreMessage = document.getElementById('newHighScoreMessage');
+  var gameOverHighScore = document.getElementById('gameOverHighScore');
+  var restartButton = document.getElementById('restartButton');
+  
+  gameOverTitle.style.fontSize = (28 * scaleFactor) + 'px';
+  newHighScoreMessage.style.fontSize = (18 * scaleFactor) + 'px';
+  gameOverHighScore.style.fontSize = (14 * scaleFactor) + 'px';
+  
+  // Scale individual score entries in the high scores list
+  var scoreEntries = gameOverHighScore.querySelectorAll('p');
+  for (var i = 0; i < scoreEntries.length; i++) {
+    if (i === 0) {
+      // Title "High Scores"
+      scoreEntries[i].style.fontSize = (14 * scaleFactor) + 'px';
+    } else {
+      // Individual score entries
+      scoreEntries[i].style.fontSize = (12 * scaleFactor) + 'px';
+    }
+  }
+  
+  restartButton.style.fontSize = (20 * scaleFactor) + 'px';
+  restartButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+  
+  // Scale score display
+  var scoreDisplay = document.getElementById('scoreDisplay');
+  scoreDisplay.style.fontSize = (48 * scaleFactor) + 'px';
+  scoreDisplay.style.top = (20 * scaleFactor) + 'px';
+  scoreDisplay.style.right = (20 * scaleFactor) + 'px';
+  
+  // Scale initials screen
+  var initialsScreen = document.getElementById('initialsScreen');
+  var initialsTitle = initialsScreen.querySelector('h1');
+  var initialsText = initialsScreen.querySelector('p');
+  var initialsInput = document.getElementById('initialsInput');
+  var submitButton = document.getElementById('submitInitials');
+  var skipButton = document.getElementById('skipInitials');
+  
+  initialsTitle.style.fontSize = (32 * scaleFactor) + 'px';
+  initialsText.style.fontSize = (18 * scaleFactor) + 'px';
+  initialsInput.style.fontSize = (24 * scaleFactor) + 'px';
+  initialsInput.style.padding = (10 * scaleFactor) + 'px ' + (15 * scaleFactor) + 'px';
+  initialsInput.style.width = (150 * scaleFactor) + 'px';
+  
+  submitButton.style.fontSize = (20 * scaleFactor) + 'px';
+  submitButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+  skipButton.style.fontSize = (20 * scaleFactor) + 'px';
+  skipButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+}
+
+// Helper function to get scaled hero size
+export function getScaledHeroSize() {
+  return {
+    width: 15 * scaling.SCALE_X * 2, // Make hero twice as big
+    height: 10 * scaling.SCALE_Y * 2 // Make hero twice as big
+  };
 }
