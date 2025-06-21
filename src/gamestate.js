@@ -8,6 +8,7 @@ import {
   PIPE_PAD,
   PIPE_BUF,
   PIPE_START_X,
+  RENDER_X,
   TOP,
 } from "./config.js";
 import { isOutOfBounds, collides, addToPt } from "./physics.js";
@@ -119,10 +120,10 @@ export function newPipes(game) {
 
 // Removes pipes that have moved off-screen
 export function cleanupPipes(game) {
+  const viewportLeft = game.hero.pos.x - RENDER_X * scaling.SCALE_X;
   while (
     game.pipes.length > 0 &&
-    game.pipes[0].pos.x + game.pipes[0].size.width <
-      game.hero.pos.x - game.hero.size.width
+    game.pipes[0].pos.x + game.pipes[0].size.width < viewportLeft
   ) {
     game.pipes.shift();
   }
