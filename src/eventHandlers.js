@@ -1,3 +1,7 @@
+import {
+  showTitleScreen
+} from './screens.js'
+
 export function setupEventHandlers(game) {
   document.addEventListener("keydown", function (evt) {
     if (game.state === "instructions" && evt.keyCode === 27) {
