@@ -7,9 +7,9 @@ export const ORIGINAL_HEIGHT = 200; // Original game height for scaling referenc
 
 // Physics constants
 export const GRAVITY_FAC = 15; // Gravity multiplier factor
-export const GRAVITY = 20 * GRAVITY_FAC; // Downward acceleration force
+export const GRAVITY = 25 * GRAVITY_FAC; // Downward acceleration force
 export const JUMP_VEL = -0.8 * GRAVITY; // Upward velocity when jumping/flapping
-export const HERO_SPEED = 80; // Hero's constant horizontal velocity
+export const HERO_SPEED = 120; // Hero's constant horizontal velocity
 
 // Pipe configuration
 export const PIPE_WID = 50; // Width of each pipe

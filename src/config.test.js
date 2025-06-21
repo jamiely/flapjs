@@ -29,9 +29,9 @@ describe("Config Module", () => {
 
     it("should have correct physics constants", () => {
       expect(GRAVITY_FAC).toBe(15);
-      expect(GRAVITY).toBe(20 * 15);
+      expect(GRAVITY).toBe(25 * 15);
       expect(JUMP_VEL).toBe(-0.8 * GRAVITY);
-      expect(HERO_SPEED).toBe(80);
+      expect(HERO_SPEED).toBe(120);
     });
 
     it("should have correct pipe configuration", () => {
@@ -53,11 +53,11 @@ describe("Config Module", () => {
 
   describe("Calculated Values", () => {
     it("should calculate GRAVITY correctly", () => {
-      expect(GRAVITY).toBe(300);
+      expect(GRAVITY).toBe(375);
     });
 
     it("should calculate JUMP_VEL correctly", () => {
-      expect(JUMP_VEL).toBe(-240);
+      expect(JUMP_VEL).toBe(-300);
     });
 
     it("should calculate PIPE_PAD correctly", () => {
@@ -70,9 +70,9 @@ describe("Config Module", () => {
       expect(CONFIG.ORIGINAL_WIDTH).toBe(500);
       expect(CONFIG.ORIGINAL_HEIGHT).toBe(200);
       expect(CONFIG.GRAVITY_FAC).toBe(15);
-      expect(CONFIG.GRAVITY).toBe(300);
-      expect(CONFIG.JUMP_VEL).toBe(-240);
-      expect(CONFIG.HERO_SPEED).toBe(80);
+      expect(CONFIG.GRAVITY).toBe(375);
+      expect(CONFIG.JUMP_VEL).toBe(-300);
+      expect(CONFIG.HERO_SPEED).toBe(120);
       expect(CONFIG.PIPE_WID).toBe(50);
       expect(CONFIG.PIPE_PAD).toBe(200);
       expect(CONFIG.PIPE_BUF).toBe(20);
