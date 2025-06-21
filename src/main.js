@@ -30,6 +30,21 @@ import {
   isOutOfBounds
 } from './physics.js';
 
+import {
+  newGame,
+  isGameOver,
+  newPipes,
+  cleanupPipes,
+  addPipes,
+  checkScore,
+  handlePipes,
+  updateHeroPhysics,
+  processJump,
+  resetGameState,
+  setGameOver,
+  GameStates
+} from './gamestate.js';
+
 (function(root, el){
   // Input throttling
   var jumpRequested = false;             // Flag to throttle jump input to animation frames
@@ -378,65 +393,6 @@ import {
     skipButton.style.fontSize = (20 * scaleFactor) + 'px';
     skipButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
   }
-  // generates a new pipe at a point after the last active pipe
-  function newPipes(game) {
-    var scaledPipeWidth = PIPE_WID * scaling.SCALE_X;
-    var scaledPipePad = PIPE_PAD * scaling.SCALE_X;
-    
-    var holeSize = {
-      width: scaledPipeWidth,
-      height: game.hero.size.height * 2.5
-    };
-
-    var minHole = holeSize.height;
-    var maxHole = scaling.BOTTOM - holeSize.height;
-    var hole;
-    
-    // Prevent same gap position twice in a row (max 5 iterations)
-    var iterations = 0;
-    do {
-      hole = Math.floor(Math.random() * (maxHole - minHole)) + minHole;
-      iterations++;
-    } while (game.lastHole && Math.abs(hole - game.lastHole) < holeSize.height * 0.5 && iterations < 5);
-    
-    game.lastHole = hole;
-
-    var lastPipe = game.pipes[game.pipes.length - 1];
-    var minX = game.hero.pos.x + PIPE_START_X * scaling.SCALE_X;
-    var x = lastPipe ? lastPipe.pos.x + scaledPipePad : minX;
-    
-    // Ensure new pipe is at least PIPE_START_X distance ahead of hero
-    if (x < minX) {
-      x = minX;
-    }
-    var h2 = holeSize.height/2;
-    var holePts = [hole - h2, hole + h2];
-
-    var p1 = {
-      pos: {
-        x: x,
-        y: TOP
-      },
-      size: {
-        width: scaledPipeWidth,
-        height: (hole - h2)
-      },
-      passed: false
-    };
-    var p2 = {
-      pos: {
-        x: x,
-        y: hole + h2
-      },
-      size: {
-        width: scaledPipeWidth,
-        height: (scaling.BOTTOM - (hole + h2))
-      },
-      passed: false
-    };
-
-    return [p1, p2];
-  }
 
   function generateClouds() {
     var clouds = [];
@@ -593,41 +549,8 @@ import {
     return buildings;
   }
 
-  function newGame() {
-    var game = {
-      hero: {
-        pos: {
-          x: 20 * scaling.SCALE_X, y: 20 * scaling.SCALE_Y
-        },
-        size: {
-          width: 15 * scaling.SCALE_X * 2, height: 10 * scaling.SCALE_Y * 2
-        },
-        vel: {
-          x: HERO_SPEED * scaling.SCALE_X, y: 0
-        }
-      },
-      pipes: [ ],
-      clouds: generateClouds(),
-      foregroundClouds: generateForegroundClouds(),
-      skyline: generateSkyline(),
-      score: 0,
-      lastHole: null,
-      state: 'title' // 'title', 'instructions', 'playing', 'gameover'
-    };
 
 
-    return game;
-  }
-
-
-  function isGameOver(game) {
-    if(isOutOfBounds(game.hero, scaling.BOTTOM)) return true;
-
-    for(var i = 0; i<game.pipes.length; i ++ ) {
-      if(collides(game.hero, game.pipes[i])) return true;
-    }
-    return false;
-  }
 
   function updateClouds(game, delta) {
     // Only update clouds if game is playing and not paused
@@ -831,38 +754,6 @@ import {
     handlePipes(game);
   }
 
-  function cleanupPipes(game) {
-    while(game.pipes.length > 0 && 
-      game.pipes[0].pos.x + game.pipes[0].size.width + RENDER_X * scaling.SCALE_X < 
-        game.hero.pos.x - game.hero.size.width) {
-      game.pipes.shift();
-    }
-  }
-  function addPipes(game) {
-    while(game.pipes.length < PIPE_BUF) {
-      game.pipes.push.apply(game.pipes, newPipes(game));
-    }
-  }
-  function checkScore(game) {
-    var heroRight = game.hero.pos.x + game.hero.size.width;
-    
-    for (var i = 0; i < game.pipes.length; i += 2) {
-      var topPipe = game.pipes[i];
-      var bottomPipe = game.pipes[i + 1];
-      
-      if (topPipe && !topPipe.passed && heroRight > topPipe.pos.x + topPipe.size.width) {
-        topPipe.passed = true;
-        if (bottomPipe) bottomPipe.passed = true;
-        game.score++;
-      }
-    }
-  }
-
-  function handlePipes(game) {
-    cleanupPipes(game);
-    addPipes(game);
-    checkScore(game);
-  }
 
 
   function p(ent) {
@@ -1553,6 +1444,10 @@ import {
   
   // Create game first
   game = newGame();
+  // Populate world generation arrays
+  game.clouds = generateClouds();
+  game.foregroundClouds = generateForegroundClouds();
+  game.skyline = generateSkyline();
   
   // Create animation function
   if(root.requestAnimationFrame) {
