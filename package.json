@@ -1,0 +1,15 @@
+{
+  "name": "flapjs",
+  "version": "1.0.0",
+  "description": "A Flappy Bird-style game implementation",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest --watch"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "jsdom": "^23.0.0"
+  }
+}

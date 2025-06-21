@@ -21,7 +21,10 @@
       "Bash(mise use:*)",
       "Bash(mise exec -- pnpm install)",
       "Bash(mise exec -- pnpm test:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

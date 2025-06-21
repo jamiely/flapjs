@@ -1,53 +1,42 @@
+import { 
+  ORIGINAL_WIDTH, 
+  ORIGINAL_HEIGHT, 
+  GRAVITY_FAC, 
+  GRAVITY, 
+  JUMP_VEL, 
+  HERO_SPEED,
+  PIPE_WID,
+  PIPE_PAD,
+  PIPE_BUF,
+  PIPE_START_X,
+  TOP,
+  RENDER_X,
+  DEFAULT_INITIALS,
+  scaling,
+  updateScaling
+} from './config.js';
+
 (function(root, el){
-  // Game dimensions and scaling
-  var ORIGINAL_WIDTH = 500;    // Original game width for scaling reference
-  var ORIGINAL_HEIGHT = 200;   // Original game height for scaling reference
-  
-  // Physics constants
-  var GRAVITY_FAC = 15;                    // Gravity multiplier factor
-  var GRAVITY = 20 * GRAVITY_FAC;          // Downward acceleration force
-  var JUMP_VEL = -0.8 * GRAVITY;       // Upward velocity when jumping/flapping
-  var HERO_SPEED = 80;                     // Hero's constant horizontal velocity
-  
-  // Pipe configuration
-  var PIPE_WID = 50;           // Width of each pipe
-  var PIPE_PAD = PIPE_WID * 4; // Horizontal spacing between pipes
-  var PIPE_BUF = 20;           // Maximum number of pipes to maintain
-  var PIPE_START_X = 200;      // Minimum distance pipes must spawn ahead of hero
-  
-  // Rendering and boundaries
-  var TOP = 0;                           // Top boundary of game area
-  var BOTTOM = window.innerHeight;       // Bottom boundary (full viewport height)
-  var RENDER_X = 60;                     // Fixed x position where hero is rendered
-  
   // Input throttling
   var jumpRequested = false;             // Flag to throttle jump input to animation frames
   
-  // Default initials for high scores
-  var DEFAULT_INITIALS = 'WIN';
-  
-  // Scaling factors
-  var SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
-  var SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
-  
   // Update scaling and bounds when window resizes
   function updateGameBounds(game) {
-    var oldScaleX = SCALE_X;
-    var oldScaleY = SCALE_Y;
+    var oldScaleX = scaling.SCALE_X;
+    var oldScaleY = scaling.SCALE_Y;
     
-    BOTTOM = window.innerHeight;
-    SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
-    SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
+    // Update scaling using the config module function
+    updateScaling();
     
     // Update game elements if game exists
     if (game) {
       // Update hero size and position scaling
       game.hero.size = getScaledHeroSize();
-      game.hero.vel.x = HERO_SPEED * SCALE_X; // Update horizontal velocity
+      game.hero.vel.x = HERO_SPEED * scaling.SCALE_X; // Update horizontal velocity
       
       // Update existing pipes with new scaling
-      var scaleRatioX = SCALE_X / oldScaleX;
-      var scaleRatioY = SCALE_Y / oldScaleY;
+      var scaleRatioX = scaling.SCALE_X / oldScaleX;
+      var scaleRatioY = scaling.SCALE_Y / oldScaleY;
       
       for (var i = 0; i < game.pipes.length; i++) {
         var pipe = game.pipes[i];
@@ -68,8 +57,8 @@
   // Helper function to get scaled hero size
   function getScaledHeroSize() {
     return {
-      width: 15 * SCALE_X * 2, // Make hero twice as big
-      height: 10 * SCALE_Y * 2 // Make hero twice as big
+      width: 15 * scaling.SCALE_X * 2, // Make hero twice as big
+      height: 10 * scaling.SCALE_Y * 2 // Make hero twice as big
     };
   }
 
@@ -377,8 +366,8 @@
   }
   // generates a new pipe at a point after the last active pipe
   function newPipes(game) {
-    var scaledPipeWidth = PIPE_WID * SCALE_X;
-    var scaledPipePad = PIPE_PAD * SCALE_X;
+    var scaledPipeWidth = PIPE_WID * scaling.SCALE_X;
+    var scaledPipePad = PIPE_PAD * scaling.SCALE_X;
     
     var holeSize = {
       width: scaledPipeWidth,
@@ -386,7 +375,7 @@
     };
 
     var minHole = holeSize.height;
-    var maxHole = BOTTOM - holeSize.height;
+    var maxHole = scaling.BOTTOM - holeSize.height;
     var hole;
     
     // Prevent same gap position twice in a row (max 5 iterations)
@@ -399,7 +388,7 @@
     game.lastHole = hole;
 
     var lastPipe = game.pipes[game.pipes.length - 1];
-    var minX = game.hero.pos.x + PIPE_START_X * SCALE_X;
+    var minX = game.hero.pos.x + PIPE_START_X * scaling.SCALE_X;
     var x = lastPipe ? lastPipe.pos.x + scaledPipePad : minX;
     
     // Ensure new pipe is at least PIPE_START_X distance ahead of hero
@@ -427,7 +416,7 @@
       },
       size: {
         width: scaledPipeWidth,
-        height: (BOTTOM - (hole + h2))
+        height: (scaling.BOTTOM - (hole + h2))
       },
       passed: false
     };
@@ -472,9 +461,9 @@
       }
       
       clouds.push({
-        x: Math.random() * (viewportWidth + 200 * SCALE_X) - 100 * SCALE_X,
-        y: Math.random() * (viewportHeight * 0.5) + 10 * SCALE_Y, // Slightly more vertical range
-        size: baseSize * Math.min(SCALE_X, SCALE_Y),
+        x: Math.random() * (viewportWidth + 200 * scaling.SCALE_X) - 100 * scaling.SCALE_X,
+        y: Math.random() * (viewportHeight * 0.5) + 10 * scaling.SCALE_Y, // Slightly more vertical range
+        size: baseSize * Math.min(scaling.SCALE_X, scaling.SCALE_Y),
         speed: Math.random() * 0.4 + 0.05, // Varied speed between 0.05-0.45
         opacity: Math.random() * 0.5 + 0.25, // Opacity between 0.25-0.75
         color: cloudColors[Math.floor(Math.random() * cloudColors.length)], // Random color
@@ -516,9 +505,9 @@
       }
       
       clouds.push({
-        x: Math.random() * (viewportWidth + 300 * SCALE_X) - 150 * SCALE_X,
+        x: Math.random() * (viewportWidth + 300 * scaling.SCALE_X) - 150 * scaling.SCALE_X,
         y: Math.random() * viewportHeight, // Can appear anywhere vertically
-        size: baseSize * Math.min(SCALE_X, SCALE_Y),
+        size: baseSize * Math.min(scaling.SCALE_X, scaling.SCALE_Y),
         speed: Math.random() * 0.2 + 0.1, // Slower speed for foreground (0.1-0.3)
         opacity: Math.random() * 0.1 + 0.05, // Very light opacity (0.05-0.15)
         color: cloudColors[Math.floor(Math.random() * cloudColors.length)],
@@ -537,11 +526,11 @@
     var viewportHeight = window.innerHeight;
     var groundLevel = viewportHeight; // Buildings touch the bottom of the viewport
     
-    var numBuildings = Math.floor(viewportWidth / (40 * SCALE_X)) + 2; // Buildings every ~40 scaled pixels
-    var currentX = -50 * SCALE_X; // Start slightly off-screen
+    var numBuildings = Math.floor(viewportWidth / (40 * scaling.SCALE_X)) + 2; // Buildings every ~40 scaled pixels
+    var currentX = -50 * scaling.SCALE_X; // Start slightly off-screen
     
     for (var i = 0; i < numBuildings; i++) {
-      var buildingWidth = (Math.random() * 60 + 30) * SCALE_X; // Width between 30-90 scaled pixels
+      var buildingWidth = (Math.random() * 60 + 30) * scaling.SCALE_X; // Width between 30-90 scaled pixels
       
       // Create different building height categories
       var heightVariation = Math.random();
@@ -549,13 +538,13 @@
       
       if (heightVariation < 0.6) {
         // Short buildings (60% chance)
-        buildingHeight = (Math.random() * 60 + 20) * SCALE_Y; // Height between 20-80 scaled pixels
+        buildingHeight = (Math.random() * 60 + 20) * scaling.SCALE_Y; // Height between 20-80 scaled pixels
       } else if (heightVariation < 0.85) {
         // Medium buildings (25% chance)
-        buildingHeight = (Math.random() * 120 + 80) * SCALE_Y; // Height between 80-200 scaled pixels
+        buildingHeight = (Math.random() * 120 + 80) * scaling.SCALE_Y; // Height between 80-200 scaled pixels
       } else {
         // Tall skyscrapers (15% chance)
-        buildingHeight = (Math.random() * 200 + 150) * SCALE_Y; // Height between 150-350 scaled pixels
+        buildingHeight = (Math.random() * 200 + 150) * scaling.SCALE_Y; // Height between 150-350 scaled pixels
         // Make skyscrapers a bit narrower
         buildingWidth = buildingWidth * (Math.random() * 0.4 + 0.6); // 60-100% of original width
       }
@@ -584,7 +573,7 @@
         speed: 0.4 + Math.random() * 0.2 // Speed between 0.4-0.6 for parallax
       });
       
-      currentX += buildingWidth + (Math.random() * 20 + 5) * SCALE_X; // Small gap between buildings
+      currentX += buildingWidth + (Math.random() * 20 + 5) * scaling.SCALE_X; // Small gap between buildings
     }
     
     return buildings;
@@ -594,13 +583,13 @@
     var game = {
       hero: {
         pos: {
-          x: 20 * SCALE_X, y: 20 * SCALE_Y
+          x: 20 * scaling.SCALE_X, y: 20 * scaling.SCALE_Y
         },
         size: {
-          width: 15 * SCALE_X * 2, height: 10 * SCALE_Y * 2
+          width: 15 * scaling.SCALE_X * 2, height: 10 * scaling.SCALE_Y * 2
         },
         vel: {
-          x: HERO_SPEED * SCALE_X, y: 0
+          x: HERO_SPEED * scaling.SCALE_X, y: 0
         }
       },
       pipes: [ ],
@@ -632,7 +621,7 @@
   }
 
   function heroIsOutOfBounds(hero) {
-    return hero.pos.y > BOTTOM;
+    return hero.pos.y > scaling.BOTTOM;
   }
 
   function isGameOver(game) {
@@ -659,9 +648,9 @@
       cloud.x -= heroSpeed * cloud.speed;
       
       // Reset cloud position if it goes off screen
-      if (cloud.x < -cloud.size - 50 * SCALE_X) {
-        cloud.x = window.innerWidth + Math.random() * 100 * SCALE_X;
-        cloud.y = Math.random() * (window.innerHeight * 0.5) + 10 * SCALE_Y;
+      if (cloud.x < -cloud.size - 50 * scaling.SCALE_X) {
+        cloud.x = window.innerWidth + Math.random() * 100 * scaling.SCALE_X;
+        cloud.y = Math.random() * (window.innerHeight * 0.5) + 10 * scaling.SCALE_Y;
         
         // Regenerate varied size
         var sizeVariation = Math.random();
@@ -673,7 +662,7 @@
         } else {
           baseSize = Math.random() * 80 + 45; // Large clouds
         }
-        cloud.size = baseSize * Math.min(SCALE_X, SCALE_Y);
+        cloud.size = baseSize * Math.min(scaling.SCALE_X, scaling.SCALE_Y);
         
         cloud.speed = Math.random() * 0.4 + 0.05;
         cloud.opacity = Math.random() * 0.5 + 0.25;
@@ -705,8 +694,8 @@
       cloud.x -= heroSpeed * cloud.speed;
       
       // Reset cloud position if it goes off screen
-      if (cloud.x < -cloud.size - 100 * SCALE_X) {
-        cloud.x = window.innerWidth + Math.random() * 200 * SCALE_X;
+      if (cloud.x < -cloud.size - 100 * scaling.SCALE_X) {
+        cloud.x = window.innerWidth + Math.random() * 200 * scaling.SCALE_X;
         cloud.y = Math.random() * window.innerHeight;
         
         // Regenerate varied size for foreground
@@ -717,7 +706,7 @@
         } else {
           baseSize = Math.random() * 120 + 60; // Large clouds
         }
-        cloud.size = baseSize * Math.min(SCALE_X, SCALE_Y);
+        cloud.size = baseSize * Math.min(scaling.SCALE_X, scaling.SCALE_Y);
         
         cloud.speed = Math.random() * 0.2 + 0.1;
         cloud.opacity = Math.random() * 0.1 + 0.05; // Very light opacity
@@ -748,7 +737,7 @@
       building.x -= heroSpeed * building.speed;
       
       // Reset building position if it goes off screen
-      if (building.x + building.width < -100 * SCALE_X) {
+      if (building.x + building.width < -100 * scaling.SCALE_X) {
         // Find the rightmost building to place new one after it
         var rightmostX = building.x;
         for (var j = 0; j < game.skyline.length; j++) {
@@ -759,7 +748,7 @@
         
         var viewportHeight = window.innerHeight;
         var groundLevel = viewportHeight;
-        var buildingWidth = (Math.random() * 60 + 30) * SCALE_X;
+        var buildingWidth = (Math.random() * 60 + 30) * scaling.SCALE_X;
         
         // Create different building height categories (same as generateSkyline)
         var heightVariation = Math.random();
@@ -767,13 +756,13 @@
         
         if (heightVariation < 0.6) {
           // Short buildings (60% chance)
-          buildingHeight = (Math.random() * 60 + 20) * SCALE_Y;
+          buildingHeight = (Math.random() * 60 + 20) * scaling.SCALE_Y;
         } else if (heightVariation < 0.85) {
           // Medium buildings (25% chance)
-          buildingHeight = (Math.random() * 120 + 80) * SCALE_Y;
+          buildingHeight = (Math.random() * 120 + 80) * scaling.SCALE_Y;
         } else {
           // Tall skyscrapers (15% chance)
-          buildingHeight = (Math.random() * 200 + 150) * SCALE_Y;
+          buildingHeight = (Math.random() * 200 + 150) * scaling.SCALE_Y;
           // Make skyscrapers a bit narrower
           buildingWidth = buildingWidth * (Math.random() * 0.4 + 0.6);
         }
@@ -790,7 +779,7 @@
           '#504C49'  // Muted brownish gray with blue undertone
         ];
         
-        building.x = rightmostX + (Math.random() * 20 + 5) * SCALE_X;
+        building.x = rightmostX + (Math.random() * 20 + 5) * scaling.SCALE_X;
         building.y = groundLevel - buildingHeight;
         building.width = buildingWidth;
         building.height = buildingHeight;
@@ -842,13 +831,13 @@
     addToPt(game.hero.vel, dAcel);
     
     // Keep horizontal velocity constant
-    game.hero.vel.x = HERO_SPEED * SCALE_X;
+    game.hero.vel.x = HERO_SPEED * scaling.SCALE_X;
     handlePipes(game);
   }
 
   function cleanupPipes(game) {
     while(game.pipes.length > 0 && 
-      game.pipes[0].pos.x + game.pipes[0].size.width + RENDER_X * SCALE_X < 
+      game.pipes[0].pos.x + game.pipes[0].size.width + RENDER_X * scaling.SCALE_X < 
         game.hero.pos.x - game.hero.size.width) {
       game.pipes.shift();
     }
@@ -949,7 +938,7 @@
   }
 
   function drawHero(cxt, hero) {
-    var x = RENDER_X * SCALE_X;
+    var x = RENDER_X * scaling.SCALE_X;
     var y = hero.pos.y;
     var w = hero.size.width;
     var h = hero.size.height;
@@ -1249,7 +1238,7 @@
     cxt.fillRect(x, y, w, h);
     
     // Add some subtle building details if the building has windows
-    if (building.windows && w > 20 * SCALE_X) {
+    if (building.windows && w > 20 * scaling.SCALE_X) {
       // Make windows slightly lighter than the building color
       var windowColor = building.color === '#3F4147' ? '#4F5157' :
                        building.color === '#4B4D52' ? '#5B5D62' :
@@ -1299,7 +1288,7 @@
   }
   
   function drawPipe(cxt, pipe, adjX) {
-    var x = pipe.pos.x - (adjX - RENDER_X * SCALE_X);
+    var x = pipe.pos.x - (adjX - RENDER_X * scaling.SCALE_X);
     var y = pipe.pos.y;
     var w = pipe.size.width;
     var h = pipe.size.height;
@@ -1496,9 +1485,9 @@
     game.clouds = generateClouds(); // Regenerate clouds for new game
     game.foregroundClouds = generateForegroundClouds(); // Regenerate foreground clouds for new game
     game.skyline = generateSkyline(); // Regenerate skyline for new game
-    game.hero.pos = {x: 20 * SCALE_X, y: 20 * SCALE_Y};
+    game.hero.pos = {x: 20 * scaling.SCALE_X, y: 20 * scaling.SCALE_Y};
     game.hero.size = getScaledHeroSize(); // Update hero size for current scale
-    game.hero.vel = {x: HERO_SPEED * SCALE_X, y: 0};
+    game.hero.vel = {x: HERO_SPEED * scaling.SCALE_X, y: 0};
     game.lastHole = null;
     
     // Hide all overlays
