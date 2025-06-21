@@ -1,0 +1,1706 @@
+(function(root, el){
+  // Game dimensions and scaling
+  var ORIGINAL_WIDTH = 500;    // Original game width for scaling reference
+  var ORIGINAL_HEIGHT = 200;   // Original game height for scaling reference
+  
+  // Physics constants
+  var GRAVITY_FAC = 15;                    // Gravity multiplier factor
+  var GRAVITY = 20 * GRAVITY_FAC;          // Downward acceleration force
+  var JUMP_VEL = -0.8 * GRAVITY;       // Upward velocity when jumping/flapping
+  var HERO_SPEED = 80;                     // Hero's constant horizontal velocity
+  
+  // Pipe configuration
+  var PIPE_WID = 50;           // Width of each pipe
+  var PIPE_PAD = PIPE_WID * 4; // Horizontal spacing between pipes
+  var PIPE_BUF = 20;           // Maximum number of pipes to maintain
+  var PIPE_START_X = 200;      // Minimum distance pipes must spawn ahead of hero
+  
+  // Rendering and boundaries
+  var TOP = 0;                           // Top boundary of game area
+  var BOTTOM = window.innerHeight;       // Bottom boundary (full viewport height)
+  var RENDER_X = 60;                     // Fixed x position where hero is rendered
+  
+  // Input throttling
+  var jumpRequested = false;             // Flag to throttle jump input to animation frames
+  
+  // Default initials for high scores
+  var DEFAULT_INITIALS = 'WIN';
+  
+  // Scaling factors
+  var SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
+  var SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
+  
+  // Update scaling and bounds when window resizes
+  function updateGameBounds(game) {
+    var oldScaleX = SCALE_X;
+    var oldScaleY = SCALE_Y;
+    
+    BOTTOM = window.innerHeight;
+    SCALE_X = window.innerWidth / ORIGINAL_WIDTH;
+    SCALE_Y = window.innerHeight / ORIGINAL_HEIGHT;
+    
+    // Update game elements if game exists
+    if (game) {
+      // Update hero size and position scaling
+      game.hero.size = getScaledHeroSize();
+      game.hero.vel.x = HERO_SPEED * SCALE_X; // Update horizontal velocity
+      
+      // Update existing pipes with new scaling
+      var scaleRatioX = SCALE_X / oldScaleX;
+      var scaleRatioY = SCALE_Y / oldScaleY;
+      
+      for (var i = 0; i < game.pipes.length; i++) {
+        var pipe = game.pipes[i];
+        // Scale pipe position and size
+        pipe.pos.x *= scaleRatioX;
+        pipe.pos.y *= scaleRatioY;
+        pipe.size.width *= scaleRatioX;
+        pipe.size.height *= scaleRatioY;
+      }
+      
+      // Regenerate clouds and skyline with new scaling
+      game.clouds = generateClouds();
+      game.foregroundClouds = generateForegroundClouds();
+      game.skyline = generateSkyline();
+    }
+  }
+  
+  // Helper function to get scaled hero size
+  function getScaledHeroSize() {
+    return {
+      width: 15 * SCALE_X * 2, // Make hero twice as big
+      height: 10 * SCALE_Y * 2 // Make hero twice as big
+    };
+  }
+
+  // Audio context for sound effects
+  var audioContext = null;
+  
+  function initAudio() {
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.log('Web Audio API not supported');
+    }
+  }
+  
+  function playBounceSound() {
+    if (!audioContext) return;
+    
+    var oscillator = audioContext.createOscillator();
+    var gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Create a quick bounce sound
+    oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  }
+  
+  function playGameOverSound() {
+    if (!audioContext) return;
+    
+    var oscillator = audioContext.createOscillator();
+    var gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Create a descending game over sound
+    oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(165, audioContext.currentTime + 0.5);
+    
+    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.8);
+  }
+  
+  // High Score Management
+  function getHighScores() {
+    try {
+      var highScoresData = localStorage.getItem('flapjs_highscores');
+      if (highScoresData) {
+        return JSON.parse(highScoresData);
+      }
+    } catch (e) {
+      console.log('Error reading high scores from localStorage');
+    }
+    
+    // Initialize with default high scores if none exist
+    var defaultScores = [
+      { score: 50, initials: 'ACE' },
+      { score: 40, initials: 'FLY' },
+      { score: 25, initials: 'SKY' },
+      { score: 10, initials: DEFAULT_INITIALS },
+      { score: 1, initials: 'TRY' }
+    ];
+    
+    // Save the default scores to localStorage
+    try {
+      localStorage.setItem('flapjs_highscores', JSON.stringify(defaultScores));
+    } catch (e) {
+      console.log('Error saving default high scores to localStorage');
+    }
+    
+    return defaultScores;
+  }
+  
+  function getTopScore() {
+    var scores = getHighScores();
+    return scores.length > 0 ? scores[0] : { score: 0, initials: '' };
+  }
+  
+  function saveHighScore(score, initials) {
+    try {
+      var scores = getHighScores();
+      var newEntry = { score: score, initials: initials || '' };
+      
+      // Add new score and sort by score (descending)
+      scores.push(newEntry);
+      scores.sort(function(a, b) { return b.score - a.score; });
+      
+      // Keep only top 5 scores
+      scores = scores.slice(0, 5);
+      
+      localStorage.setItem('flapjs_highscores', JSON.stringify(scores));
+      return true;
+    } catch (e) {
+      console.log('Error saving high scores to localStorage');
+      return false;
+    }
+  }
+  
+  function isNewHighScore(score) {
+    var scores = getHighScores();
+    return scores.length < 5 || score > scores[scores.length - 1].score;
+  }
+  
+  function getScorePosition(score) {
+    var scores = getHighScores();
+    for (var i = 0; i < scores.length; i++) {
+      if (score >= scores[i].score) {
+        return i + 1; // 1-based position
+      }
+    }
+    return scores.length + 1; // New score would be at the end
+  }
+  
+  function promptForInitials(callback) {
+    var initialsScreen = document.getElementById('initialsScreen');
+    var initialsInput = document.getElementById('initialsInput');
+    var submitButton = document.getElementById('submitInitials');
+    var skipButton = document.getElementById('skipInitials');
+    
+    // Clear previous input and show screen
+    initialsInput.value = '';
+    initialsScreen.style.display = 'flex';
+    
+    // Focus on input
+    setTimeout(function() {
+      initialsInput.focus();
+    }, 100);
+    
+    // Handle submit
+    function handleSubmit() {
+      var initials = initialsInput.value.trim().substring(0, 5);
+      if (!initials) {
+        initials = DEFAULT_INITIALS;
+      }
+      initialsScreen.style.display = 'none';
+      callback(initials);
+      cleanup();
+    }
+    
+    // Handle skip
+    function handleSkip() {
+      initialsScreen.style.display = 'none';
+      callback(DEFAULT_INITIALS);
+      cleanup();
+    }
+    
+    // Handle enter key
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleSubmit();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        handleSkip();
+      }
+    }
+    
+    // Cleanup function to remove event listeners
+    function cleanup() {
+      submitButton.removeEventListener('click', handleSubmit);
+      skipButton.removeEventListener('click', handleSkip);
+      initialsInput.removeEventListener('keydown', handleKeyPress);
+    }
+    
+    // Add event listeners
+    submitButton.addEventListener('click', handleSubmit);
+    skipButton.addEventListener('click', handleSkip);
+    initialsInput.addEventListener('keydown', handleKeyPress);
+  }
+
+  // Creates the canvas
+  function setupCanvas(parent, animationFunction) {
+    var canvas = document.createElement('canvas');
+    canvas.id = 'gameCanvas';
+    canvas.style.cursor = 'none';
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.zIndex = '1';
+    
+    // Make canvas fullscreen
+    function resizeCanvas() {
+      var windowWidth = window.innerWidth;
+      var windowHeight = window.innerHeight;
+      
+      // Set canvas to full viewport size
+      canvas.width = windowWidth;
+      canvas.height = windowHeight;
+      canvas.style.width = windowWidth + 'px';
+      canvas.style.height = windowHeight + 'px';
+      
+      // Update game bounds
+      updateGameBounds(game);
+      
+      // Update overlay sizes to match canvas
+      updateOverlaySizes(windowWidth, windowHeight);
+      
+      // Request a render after resize (especially important during pause)
+      if (animationFunction && animationFunction.requestRender) {
+        animationFunction.requestRender();
+      }
+    }
+    
+    resizeCanvas();
+    parent.appendChild(canvas);
+    
+    // Add resize listener
+    window.addEventListener('resize', resizeCanvas);
+    
+    return canvas;
+  }
+  
+  function updateOverlaySizes(canvasWidth, canvasHeight) {
+    // Overlays now take full window, but we still scale fonts based on canvas size
+    var scaleFactor = Math.min(canvasWidth / 500, canvasHeight / 200);
+    
+    // Scale title screen
+    var title = titleScreen.querySelector('h1');
+    title.style.fontSize = (48 * scaleFactor) + 'px';
+    
+    var titleHighScore = document.getElementById('titleHighScore');
+    titleHighScore.style.fontSize = (16 * scaleFactor) + 'px';
+    document.getElementById('titleHighScoreValue').style.fontSize = (24 * scaleFactor) + 'px';
+    document.getElementById('titleHighScoreInitials').style.fontSize = (14 * scaleFactor) + 'px';
+    
+    var startButton = document.getElementById('startButton');
+    var instructionsButton = document.getElementById('instructionsButton');
+    startButton.style.fontSize = (24 * scaleFactor) + 'px';
+    startButton.style.padding = (15 * scaleFactor) + 'px ' + (30 * scaleFactor) + 'px';
+    instructionsButton.style.fontSize = (24 * scaleFactor) + 'px';
+    instructionsButton.style.padding = (15 * scaleFactor) + 'px ' + (30 * scaleFactor) + 'px';
+    
+    // Scale instructions screen
+    var instructionsTitle = instructionsScreen.querySelector('h2');
+    var instructionsList = instructionsScreen.querySelector('ul');
+    var backButton = document.getElementById('backButton');
+    
+    instructionsTitle.style.fontSize = (24 * scaleFactor) + 'px';
+    instructionsList.style.fontSize = (16 * scaleFactor) + 'px';
+    backButton.style.fontSize = (18 * scaleFactor) + 'px';
+    backButton.style.padding = (10 * scaleFactor) + 'px ' + (20 * scaleFactor) + 'px';
+    
+    // Scale game over screen
+    var gameOverTitle = gameOverScreen.querySelector('h1');
+    var newHighScoreMessage = document.getElementById('newHighScoreMessage');
+    var gameOverHighScore = document.getElementById('gameOverHighScore');
+    var restartButton = document.getElementById('restartButton');
+    
+    gameOverTitle.style.fontSize = (28 * scaleFactor) + 'px';
+    newHighScoreMessage.style.fontSize = (18 * scaleFactor) + 'px';
+    gameOverHighScore.style.fontSize = (14 * scaleFactor) + 'px';
+    
+    // Scale individual score entries in the high scores list
+    var scoreEntries = gameOverHighScore.querySelectorAll('p');
+    for (var i = 0; i < scoreEntries.length; i++) {
+      if (i === 0) {
+        // Title "High Scores"
+        scoreEntries[i].style.fontSize = (14 * scaleFactor) + 'px';
+      } else {
+        // Individual score entries
+        scoreEntries[i].style.fontSize = (12 * scaleFactor) + 'px';
+      }
+    }
+    
+    restartButton.style.fontSize = (20 * scaleFactor) + 'px';
+    restartButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+    
+    // Scale score display
+    var scoreDisplay = document.getElementById('scoreDisplay');
+    scoreDisplay.style.fontSize = (48 * scaleFactor) + 'px';
+    scoreDisplay.style.top = (20 * scaleFactor) + 'px';
+    scoreDisplay.style.right = (20 * scaleFactor) + 'px';
+    
+    // Scale initials screen
+    var initialsScreen = document.getElementById('initialsScreen');
+    var initialsTitle = initialsScreen.querySelector('h1');
+    var initialsText = initialsScreen.querySelector('p');
+    var initialsInput = document.getElementById('initialsInput');
+    var submitButton = document.getElementById('submitInitials');
+    var skipButton = document.getElementById('skipInitials');
+    
+    initialsTitle.style.fontSize = (32 * scaleFactor) + 'px';
+    initialsText.style.fontSize = (18 * scaleFactor) + 'px';
+    initialsInput.style.fontSize = (24 * scaleFactor) + 'px';
+    initialsInput.style.padding = (10 * scaleFactor) + 'px ' + (15 * scaleFactor) + 'px';
+    initialsInput.style.width = (150 * scaleFactor) + 'px';
+    
+    submitButton.style.fontSize = (20 * scaleFactor) + 'px';
+    submitButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+    skipButton.style.fontSize = (20 * scaleFactor) + 'px';
+    skipButton.style.padding = (12 * scaleFactor) + 'px ' + (24 * scaleFactor) + 'px';
+  }
+  // generates a new pipe at a point after the last active pipe
+  function newPipes(game) {
+    var scaledPipeWidth = PIPE_WID * SCALE_X;
+    var scaledPipePad = PIPE_PAD * SCALE_X;
+    
+    var holeSize = {
+      width: scaledPipeWidth,
+      height: game.hero.size.height * 2.5
+    };
+
+    var minHole = holeSize.height;
+    var maxHole = BOTTOM - holeSize.height;
+    var hole;
+    
+    // Prevent same gap position twice in a row (max 5 iterations)
+    var iterations = 0;
+    do {
+      hole = Math.floor(Math.random() * (maxHole - minHole)) + minHole;
+      iterations++;
+    } while (game.lastHole && Math.abs(hole - game.lastHole) < holeSize.height * 0.5 && iterations < 5);
+    
+    game.lastHole = hole;
+
+    var lastPipe = game.pipes[game.pipes.length - 1];
+    var minX = game.hero.pos.x + PIPE_START_X * SCALE_X;
+    var x = lastPipe ? lastPipe.pos.x + scaledPipePad : minX;
+    
+    // Ensure new pipe is at least PIPE_START_X distance ahead of hero
+    if (x < minX) {
+      x = minX;
+    }
+    var h2 = holeSize.height/2;
+    var holePts = [hole - h2, hole + h2];
+
+    var p1 = {
+      pos: {
+        x: x,
+        y: TOP
+      },
+      size: {
+        width: scaledPipeWidth,
+        height: (hole - h2)
+      },
+      passed: false
+    };
+    var p2 = {
+      pos: {
+        x: x,
+        y: hole + h2
+      },
+      size: {
+        width: scaledPipeWidth,
+        height: (BOTTOM - (hole + h2))
+      },
+      passed: false
+    };
+
+    return [p1, p2];
+  }
+
+  function generateClouds() {
+    var clouds = [];
+    var numClouds = 8;
+    var viewportHeight = window.innerHeight;
+    var viewportWidth = window.innerWidth;
+    
+    // Define cloud color options - various shades of white and light blue
+    var cloudColors = [
+      '#FFFFFF',  // Pure white
+      '#F8F8FF',  // Ghost white
+      '#F0F8FF',  // Alice blue
+      '#E6F3FF',  // Very light blue
+      '#F5F5F5',  // White smoke
+      '#FFFAFA',  // Snow white
+      '#F0FFFF',  // Azure
+      '#E0F6FF',  // Light cyan
+      '#F7F7F7',  // Very light gray
+      '#E8F4F8'   // Very light blue-gray
+    ];
+    
+    for (var i = 0; i < numClouds; i++) {
+      // Much more varied size range - from tiny to huge clouds
+      var sizeVariation = Math.random();
+      var baseSize;
+      
+      if (sizeVariation < 0.3) {
+        // Small clouds (30% chance)
+        baseSize = Math.random() * 20 + 8;
+      } else if (sizeVariation < 0.7) {
+        // Medium clouds (40% chance)
+        baseSize = Math.random() * 40 + 25;
+      } else {
+        // Large clouds (30% chance)
+        baseSize = Math.random() * 80 + 45;
+      }
+      
+      clouds.push({
+        x: Math.random() * (viewportWidth + 200 * SCALE_X) - 100 * SCALE_X,
+        y: Math.random() * (viewportHeight * 0.5) + 10 * SCALE_Y, // Slightly more vertical range
+        size: baseSize * Math.min(SCALE_X, SCALE_Y),
+        speed: Math.random() * 0.4 + 0.05, // Varied speed between 0.05-0.45
+        opacity: Math.random() * 0.5 + 0.25, // Opacity between 0.25-0.75
+        color: cloudColors[Math.floor(Math.random() * cloudColors.length)], // Random color
+        // Add shape variation properties
+        puffiness: Math.random() * 0.5 + 0.5, // How puffy the cloud is (0.5-1.0)
+        stretch: Math.random() * 0.4 + 0.8 // Horizontal stretch factor (0.8-1.2)
+      });
+    }
+    
+    return clouds;
+  }
+
+  function generateForegroundClouds() {
+    var clouds = [];
+    var numClouds = 4; // Fewer foreground clouds to not obstruct gameplay
+    var viewportHeight = window.innerHeight;
+    var viewportWidth = window.innerWidth;
+    
+    // Use lighter colors for foreground clouds
+    var cloudColors = [
+      '#FFFFFF',  // Pure white
+      '#F8F8FF',  // Ghost white
+      '#F0F8FF',  // Alice blue
+      '#F5F5F5',  // White smoke
+      '#FFFAFA'   // Snow white
+    ];
+    
+    for (var i = 0; i < numClouds; i++) {
+      // Larger clouds for foreground to create better depth effect
+      var sizeVariation = Math.random();
+      var baseSize;
+      
+      if (sizeVariation < 0.4) {
+        // Medium clouds (40% chance)
+        baseSize = Math.random() * 60 + 40;
+      } else {
+        // Large clouds (60% chance)
+        baseSize = Math.random() * 120 + 60;
+      }
+      
+      clouds.push({
+        x: Math.random() * (viewportWidth + 300 * SCALE_X) - 150 * SCALE_X,
+        y: Math.random() * viewportHeight, // Can appear anywhere vertically
+        size: baseSize * Math.min(SCALE_X, SCALE_Y),
+        speed: Math.random() * 0.2 + 0.1, // Slower speed for foreground (0.1-0.3)
+        opacity: Math.random() * 0.1 + 0.05, // Very light opacity (0.05-0.15)
+        color: cloudColors[Math.floor(Math.random() * cloudColors.length)],
+        // Add shape variation properties
+        puffiness: Math.random() * 0.3 + 0.7, // More puffy for foreground (0.7-1.0)
+        stretch: Math.random() * 0.6 + 0.8 // More stretched (0.8-1.4)
+      });
+    }
+    
+    return clouds;
+  }
+
+  function generateSkyline() {
+    var buildings = [];
+    var viewportWidth = window.innerWidth;
+    var viewportHeight = window.innerHeight;
+    var groundLevel = viewportHeight; // Buildings touch the bottom of the viewport
+    
+    var numBuildings = Math.floor(viewportWidth / (40 * SCALE_X)) + 2; // Buildings every ~40 scaled pixels
+    var currentX = -50 * SCALE_X; // Start slightly off-screen
+    
+    for (var i = 0; i < numBuildings; i++) {
+      var buildingWidth = (Math.random() * 60 + 30) * SCALE_X; // Width between 30-90 scaled pixels
+      
+      // Create different building height categories
+      var heightVariation = Math.random();
+      var buildingHeight;
+      
+      if (heightVariation < 0.6) {
+        // Short buildings (60% chance)
+        buildingHeight = (Math.random() * 60 + 20) * SCALE_Y; // Height between 20-80 scaled pixels
+      } else if (heightVariation < 0.85) {
+        // Medium buildings (25% chance)
+        buildingHeight = (Math.random() * 120 + 80) * SCALE_Y; // Height between 80-200 scaled pixels
+      } else {
+        // Tall skyscrapers (15% chance)
+        buildingHeight = (Math.random() * 200 + 150) * SCALE_Y; // Height between 150-350 scaled pixels
+        // Make skyscrapers a bit narrower
+        buildingWidth = buildingWidth * (Math.random() * 0.4 + 0.6); // 60-100% of original width
+      }
+      
+      // Generate muted colors with sky blue undertones
+      var colorOptions = [
+        '#3F4147', // Muted dark gray with blue undertone
+        '#4B4D52', // Muted medium gray with blue undertone
+        '#5A4741', // Muted dark brown with blue undertone
+        '#6B5D56', // Muted light brown with blue undertone
+        '#525459', // Muted gray with blue undertone
+        '#4A5451', // Muted olive gray with blue undertone
+        '#3A4C4C', // Muted slate gray with blue undertone
+        '#504C49'  // Muted brownish gray with blue undertone
+      ];
+      
+      buildings.push({
+        x: currentX,
+        y: groundLevel - buildingHeight,
+        width: buildingWidth,
+        height: buildingHeight,
+        color: colorOptions[Math.floor(Math.random() * colorOptions.length)],
+        // Add some building details
+        windows: Math.random() > 0.3, // 70% chance of having windows
+        antenna: Math.random() > 0.7, // 30% chance of having antenna
+        speed: 0.4 + Math.random() * 0.2 // Speed between 0.4-0.6 for parallax
+      });
+      
+      currentX += buildingWidth + (Math.random() * 20 + 5) * SCALE_X; // Small gap between buildings
+    }
+    
+    return buildings;
+  }
+
+  function newGame() {
+    var game = {
+      hero: {
+        pos: {
+          x: 20 * SCALE_X, y: 20 * SCALE_Y
+        },
+        size: {
+          width: 15 * SCALE_X * 2, height: 10 * SCALE_Y * 2
+        },
+        vel: {
+          x: HERO_SPEED * SCALE_X, y: 0
+        }
+      },
+      pipes: [ ],
+      clouds: generateClouds(),
+      foregroundClouds: generateForegroundClouds(),
+      skyline: generateSkyline(),
+      score: 0,
+      lastHole: null,
+      state: 'title' // 'title', 'instructions', 'playing', 'gameover'
+    };
+
+
+    return game;
+  }
+
+  function pt(x,y) {
+    return {x:x, y:y};
+  }
+  function addToPt(a, b) {
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+  }
+  function addPt(a, b) {
+    return {
+      x: a.x + b.x,
+      y: a.y + b.y
+    };
+  }
+
+  function heroIsOutOfBounds(hero) {
+    return hero.pos.y > BOTTOM;
+  }
+
+  function isGameOver(game) {
+    if(heroIsOutOfBounds(game.hero)) return true;
+
+    for(var i = 0; i<game.pipes.length; i ++ ) {
+      if(collides(game.hero, game.pipes[i])) return true;
+    }
+    return false;
+  }
+
+  function updateClouds(game, delta) {
+    // Only update clouds if game is playing and not paused
+    if (game.state !== 'playing' || game.pause || game.isGameOver) {
+      return;
+    }
+    
+    // Update cloud positions based on hero's movement and their own speed
+    var heroSpeed = game.hero.vel.x * delta;
+    
+    for (var i = 0; i < game.clouds.length; i++) {
+      var cloud = game.clouds[i];
+      // Move clouds relative to hero movement (parallax effect)
+      cloud.x -= heroSpeed * cloud.speed;
+      
+      // Reset cloud position if it goes off screen
+      if (cloud.x < -cloud.size - 50 * SCALE_X) {
+        cloud.x = window.innerWidth + Math.random() * 100 * SCALE_X;
+        cloud.y = Math.random() * (window.innerHeight * 0.5) + 10 * SCALE_Y;
+        
+        // Regenerate varied size
+        var sizeVariation = Math.random();
+        var baseSize;
+        if (sizeVariation < 0.3) {
+          baseSize = Math.random() * 20 + 8; // Small clouds
+        } else if (sizeVariation < 0.7) {
+          baseSize = Math.random() * 40 + 25; // Medium clouds
+        } else {
+          baseSize = Math.random() * 80 + 45; // Large clouds
+        }
+        cloud.size = baseSize * Math.min(SCALE_X, SCALE_Y);
+        
+        cloud.speed = Math.random() * 0.4 + 0.05;
+        cloud.opacity = Math.random() * 0.5 + 0.25;
+        
+        // Regenerate color and shape properties
+        var cloudColors = [
+          '#FFFFFF', '#F8F8FF', '#F0F8FF', '#E6F3FF', '#F5F5F5',
+          '#FFFAFA', '#F0FFFF', '#E0F6FF', '#F7F7F7', '#E8F4F8'
+        ];
+        cloud.color = cloudColors[Math.floor(Math.random() * cloudColors.length)];
+        cloud.puffiness = Math.random() * 0.5 + 0.5;
+        cloud.stretch = Math.random() * 0.4 + 0.8;
+      }
+    }
+  }
+
+  function updateForegroundClouds(game, delta) {
+    // Only update clouds if game is playing and not paused
+    if (game.state !== 'playing' || game.pause || game.isGameOver) {
+      return;
+    }
+    
+    // Update foreground cloud positions based on hero's movement and their own speed
+    var heroSpeed = game.hero.vel.x * delta;
+    
+    for (var i = 0; i < game.foregroundClouds.length; i++) {
+      var cloud = game.foregroundClouds[i];
+      // Move clouds relative to hero movement (parallax effect - slower for foreground)
+      cloud.x -= heroSpeed * cloud.speed;
+      
+      // Reset cloud position if it goes off screen
+      if (cloud.x < -cloud.size - 100 * SCALE_X) {
+        cloud.x = window.innerWidth + Math.random() * 200 * SCALE_X;
+        cloud.y = Math.random() * window.innerHeight;
+        
+        // Regenerate varied size for foreground
+        var sizeVariation = Math.random();
+        var baseSize;
+        if (sizeVariation < 0.4) {
+          baseSize = Math.random() * 60 + 40; // Medium clouds
+        } else {
+          baseSize = Math.random() * 120 + 60; // Large clouds
+        }
+        cloud.size = baseSize * Math.min(SCALE_X, SCALE_Y);
+        
+        cloud.speed = Math.random() * 0.2 + 0.1;
+        cloud.opacity = Math.random() * 0.1 + 0.05; // Very light opacity
+        
+        // Regenerate color and shape properties for foreground
+        var cloudColors = [
+          '#FFFFFF', '#F8F8FF', '#F0F8FF', '#F5F5F5', '#FFFAFA'
+        ];
+        cloud.color = cloudColors[Math.floor(Math.random() * cloudColors.length)];
+        cloud.puffiness = Math.random() * 0.3 + 0.7;
+        cloud.stretch = Math.random() * 0.6 + 0.8;
+      }
+    }
+  }
+
+  function updateSkyline(game, delta) {
+    // Only update skyline if game is playing and not paused
+    if (game.state !== 'playing' || game.pause || game.isGameOver) {
+      return;
+    }
+    
+    // Update building positions based on hero's movement and parallax speed
+    var heroSpeed = game.hero.vel.x * delta;
+    
+    for (var i = 0; i < game.skyline.length; i++) {
+      var building = game.skyline[i];
+      // Move buildings relative to hero movement (parallax effect - slower than hero)
+      building.x -= heroSpeed * building.speed;
+      
+      // Reset building position if it goes off screen
+      if (building.x + building.width < -100 * SCALE_X) {
+        // Find the rightmost building to place new one after it
+        var rightmostX = building.x;
+        for (var j = 0; j < game.skyline.length; j++) {
+          if (game.skyline[j].x + game.skyline[j].width > rightmostX) {
+            rightmostX = game.skyline[j].x + game.skyline[j].width;
+          }
+        }
+        
+        var viewportHeight = window.innerHeight;
+        var groundLevel = viewportHeight;
+        var buildingWidth = (Math.random() * 60 + 30) * SCALE_X;
+        
+        // Create different building height categories (same as generateSkyline)
+        var heightVariation = Math.random();
+        var buildingHeight;
+        
+        if (heightVariation < 0.6) {
+          // Short buildings (60% chance)
+          buildingHeight = (Math.random() * 60 + 20) * SCALE_Y;
+        } else if (heightVariation < 0.85) {
+          // Medium buildings (25% chance)
+          buildingHeight = (Math.random() * 120 + 80) * SCALE_Y;
+        } else {
+          // Tall skyscrapers (15% chance)
+          buildingHeight = (Math.random() * 200 + 150) * SCALE_Y;
+          // Make skyscrapers a bit narrower
+          buildingWidth = buildingWidth * (Math.random() * 0.4 + 0.6);
+        }
+        
+        // Generate muted colors with sky blue undertones for new buildings
+        var colorOptions = [
+          '#3F4147', // Muted dark gray with blue undertone
+          '#4B4D52', // Muted medium gray with blue undertone
+          '#5A4741', // Muted dark brown with blue undertone
+          '#6B5D56', // Muted light brown with blue undertone
+          '#525459', // Muted gray with blue undertone
+          '#4A5451', // Muted olive gray with blue undertone
+          '#3A4C4C', // Muted slate gray with blue undertone
+          '#504C49'  // Muted brownish gray with blue undertone
+        ];
+        
+        building.x = rightmostX + (Math.random() * 20 + 5) * SCALE_X;
+        building.y = groundLevel - buildingHeight;
+        building.width = buildingWidth;
+        building.height = buildingHeight;
+        building.color = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+        building.windows = Math.random() > 0.3;
+        building.antenna = Math.random() > 0.7;
+        building.speed = 0.4 + Math.random() * 0.2;
+      }
+    }
+  }
+
+  // tick the game by delta seconds
+  function tick(game, delta) {
+    // Always update clouds and skyline, even when not playing
+    updateClouds(game, delta);
+    updateForegroundClouds(game, delta);
+    updateSkyline(game, delta);
+    
+    if(game.state !== 'playing') {
+      return;
+    }
+    
+    if(game.pause || game.isGameOver) {
+      return;
+    } else if(isGameOver(game)) {
+      game.isGameOver = true;
+      playGameOverSound();
+      enableStartButton(game);
+      return;
+    }
+
+    // Process jump request if one is pending
+    if (jumpRequested && !game.isGameOver) {
+      game.hero.vel.y = JUMP_VEL;
+      
+      playBounceSound();
+      jumpRequested = false; // Reset the jump request
+    }
+
+    var dAcel = {
+      x: 0,
+      y: GRAVITY * delta
+    };
+    var dPt = {
+      x: game.hero.vel.x * delta,
+      y: game.hero.vel.y * delta + 0.5 * GRAVITY * delta * delta
+    };
+    addToPt(game.hero.pos, dPt);
+    addToPt(game.hero.vel, dAcel);
+    
+    // Keep horizontal velocity constant
+    game.hero.vel.x = HERO_SPEED * SCALE_X;
+    handlePipes(game);
+  }
+
+  function cleanupPipes(game) {
+    while(game.pipes.length > 0 && 
+      game.pipes[0].pos.x + game.pipes[0].size.width + RENDER_X * SCALE_X < 
+        game.hero.pos.x - game.hero.size.width) {
+      game.pipes.shift();
+    }
+  }
+  function addPipes(game) {
+    while(game.pipes.length < PIPE_BUF) {
+      game.pipes.push.apply(game.pipes, newPipes(game));
+    }
+  }
+  function checkScore(game) {
+    var heroRight = game.hero.pos.x + game.hero.size.width;
+    
+    for (var i = 0; i < game.pipes.length; i += 2) {
+      var topPipe = game.pipes[i];
+      var bottomPipe = game.pipes[i + 1];
+      
+      if (topPipe && !topPipe.passed && heroRight > topPipe.pos.x + topPipe.size.width) {
+        topPipe.passed = true;
+        if (bottomPipe) bottomPipe.passed = true;
+        game.score++;
+      }
+    }
+  }
+
+  function handlePipes(game) {
+    cleanupPipes(game);
+    addPipes(game);
+    checkScore(game);
+  }
+
+  function between(b, a, c) {
+    return (a < b && b <= c) || 
+      (a >= b && b > c);
+  }
+
+  function within(pt, b) {
+    if(between(pt.x, b.pos.x, b.pos.x + b.size.width) &&
+      between(pt.y, b.pos.y, b.pos.y + b.size.height)) return true;
+
+    return false;
+  }
+
+  function farPt(ent) {
+    return {
+      x: ent.pos.x + ent.size.width,
+      y: ent.pos.y + ent.size.height
+    };
+  }
+
+  function p(ent) {
+    return "[size=" + ent.size.width + "," + ent.size.height + 
+      " pos=" + ent.pos.x + "," + ent.pos.y +  "]";
+  }
+
+  function allPts(ent) {
+    return [pt(0, 0), pt(ent.size.width, 0),
+      pt(0, ent.size.height), pt(ent.size.width, ent.size.height)].
+      map(function(d) {
+        return addPt(ent.pos, d);
+      });
+  }
+
+  function anyPtsWithin(a, b) {
+    var allPtsA = allPts(a);
+    for(var i = 0; i < allPtsA.length; i ++ ) {
+      if(within(allPtsA[i], b)) return true;
+    }
+    return false;
+  }
+
+  function getHeroCollisionBounds(hero) {
+    // Create a smaller collision box (60% of visual size, centered)
+    var collisionScale = 0.6;
+    var visualW = hero.size.width;
+    var visualH = hero.size.height;
+    var collisionW = visualW * collisionScale;
+    var collisionH = visualH * collisionScale;
+    
+    return {
+      pos: {
+        x: hero.pos.x + (visualW - collisionW) / 2,
+        y: hero.pos.y + (visualH - collisionH) / 2
+      },
+      size: {
+        width: collisionW,
+        height: collisionH
+      }
+    };
+  }
+
+  function collides(a, b) {
+    // Use smaller collision bounds for hero
+    var heroCollisionBounds = getHeroCollisionBounds(a);
+    if(anyPtsWithin(heroCollisionBounds, b)) return true;
+    if(anyPtsWithin(b, heroCollisionBounds)) return true;
+
+    return false;
+  }
+
+  function drawHero(cxt, hero) {
+    var x = RENDER_X * SCALE_X;
+    var y = hero.pos.y;
+    var w = hero.size.width;
+    var h = hero.size.height;
+    var centerX = x + w/2;
+    var centerY = y + h/2;
+    var radius = Math.min(w, h)/2;
+    
+    // Calculate rotation based on velocity
+    var maxUpwardTilt = -0.5; // Maximum upward tilt (radians)
+    var maxDownwardTilt = 0.8; // Maximum downward tilt (radians)
+    var maxVelocity = 300; // Velocity at which max tilt is reached
+    
+    var rotation = Math.max(maxUpwardTilt, Math.min(maxDownwardTilt, hero.vel.y / maxVelocity * maxDownwardTilt));
+    
+    // Save context and apply rotation
+    cxt.save();
+    cxt.translate(centerX, centerY);
+    cxt.rotate(rotation);
+    cxt.translate(-centerX, -centerY);
+    
+    // Draw shadow
+    cxt.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    cxt.beginPath();
+    cxt.arc(centerX + 3, centerY + 3, radius * 1.1, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Draw main body with enhanced gradient
+    var bodyGradient = cxt.createRadialGradient(centerX - radius * 0.4, centerY - radius * 0.4, 0, centerX, centerY, radius * 1.2);
+    bodyGradient.addColorStop(0, '#FFF59D'); // Very light yellow
+    bodyGradient.addColorStop(0.3, '#FFEE58'); // Light yellow
+    bodyGradient.addColorStop(0.7, '#FFD54F'); // Golden yellow
+    bodyGradient.addColorStop(1, '#FFC107'); // Deep golden
+    
+    cxt.fillStyle = bodyGradient;
+    cxt.beginPath();
+    cxt.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Add body outline
+    cxt.strokeStyle = '#FF8F00';
+    cxt.lineWidth = 2;
+    cxt.beginPath();
+    cxt.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    cxt.stroke();
+    
+    // Draw belly with gradient
+    var bellyGradient = cxt.createRadialGradient(centerX, centerY + radius * 0.3, 0, centerX, centerY + radius * 0.3, radius * 0.6);
+    bellyGradient.addColorStop(0, '#FFF8E1'); // Very light cream
+    bellyGradient.addColorStop(1, '#FFECB3'); // Light cream
+    
+    cxt.fillStyle = bellyGradient;
+    cxt.beginPath();
+    cxt.arc(centerX, centerY + radius * 0.3, radius * 0.5, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Draw cheek blush with gradient
+    var blushGradient = cxt.createRadialGradient(centerX - radius * 0.4, centerY + radius * 0.2, 0, centerX - radius * 0.4, centerY + radius * 0.2, radius * 0.25);
+    blushGradient.addColorStop(0, 'rgba(255, 182, 193, 0.6)');
+    blushGradient.addColorStop(1, 'rgba(255, 182, 193, 0.1)');
+    
+    cxt.fillStyle = blushGradient;
+    cxt.beginPath();
+    cxt.arc(centerX - radius * 0.4, centerY + radius * 0.2, radius * 0.2, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Draw enhanced beak with gradient and highlight
+    var beakGradient = cxt.createLinearGradient(centerX + radius * 0.6, centerY - radius * 0.15, centerX + radius * 1.1, centerY + radius * 0.15);
+    beakGradient.addColorStop(0, '#FF9800'); // Bright orange
+    beakGradient.addColorStop(0.5, '#FF7043'); // Orange-red
+    beakGradient.addColorStop(1, '#FF5722'); // Deep orange-red
+    
+    cxt.fillStyle = beakGradient;
+    cxt.beginPath();
+    cxt.moveTo(centerX + radius * 0.6, centerY - radius * 0.15);
+    cxt.lineTo(centerX + radius * 1.1, centerY);
+    cxt.lineTo(centerX + radius * 0.6, centerY + radius * 0.15);
+    cxt.closePath();
+    cxt.fill();
+    
+    // Add beak highlight
+    cxt.fillStyle = '#FFB74D';
+    cxt.beginPath();
+    cxt.moveTo(centerX + radius * 0.6, centerY - radius * 0.15);
+    cxt.lineTo(centerX + radius * 0.9, centerY - radius * 0.05);
+    cxt.lineTo(centerX + radius * 0.6, centerY);
+    cxt.closePath();
+    cxt.fill();
+    
+    // Draw enhanced eyes with more detail
+    // Left eye white base with gradient
+    var eyeGradient = cxt.createRadialGradient(centerX + radius * 0.2, centerY - radius * 0.25, 0, centerX + radius * 0.2, centerY - radius * 0.25, radius * 0.25);
+    eyeGradient.addColorStop(0, '#FFFFFF');
+    eyeGradient.addColorStop(1, '#F5F5F5');
+    
+    cxt.fillStyle = eyeGradient;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.2, centerY - radius * 0.25, radius * 0.25, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Left eye outline
+    cxt.strokeStyle = '#E0E0E0';
+    cxt.lineWidth = 1;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.2, centerY - radius * 0.25, radius * 0.25, 0, 2 * Math.PI);
+    cxt.stroke();
+    
+    // Left eye pupil with gradient
+    var pupilGradient = cxt.createRadialGradient(centerX + radius * 0.25, centerY - radius * 0.2, 0, centerX + radius * 0.25, centerY - radius * 0.2, radius * 0.12);
+    pupilGradient.addColorStop(0, '#1A1A1A');
+    pupilGradient.addColorStop(1, '#000000');
+    
+    cxt.fillStyle = pupilGradient;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.25, centerY - radius * 0.2, radius * 0.12, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Left eye sparkles (multiple)
+    cxt.fillStyle = 'white';
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.3, centerY - radius * 0.3, radius * 0.06, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.28, centerY - radius * 0.15, radius * 0.03, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right eye (smaller, similar treatment)
+    var rightEyeGradient = cxt.createRadialGradient(centerX + radius * 0.5, centerY - radius * 0.35, 0, centerX + radius * 0.5, centerY - radius * 0.35, radius * 0.15);
+    rightEyeGradient.addColorStop(0, '#FFFFFF');
+    rightEyeGradient.addColorStop(1, '#F5F5F5');
+    
+    cxt.fillStyle = rightEyeGradient;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.5, centerY - radius * 0.35, radius * 0.15, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right eye outline
+    cxt.strokeStyle = '#E0E0E0';
+    cxt.lineWidth = 1;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.5, centerY - radius * 0.35, radius * 0.15, 0, 2 * Math.PI);
+    cxt.stroke();
+    
+    // Right eye pupil
+    cxt.fillStyle = pupilGradient;
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.52, centerY - radius * 0.32, radius * 0.08, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right eye sparkle
+    cxt.fillStyle = 'white';
+    cxt.beginPath();
+    cxt.arc(centerX + radius * 0.56, centerY - radius * 0.38, radius * 0.04, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Draw enhanced wing with gradient and feather details
+    var wingGradient = cxt.createLinearGradient(centerX - radius * 1.2, centerY, centerX + radius * 0.2, centerY + radius * 0.8);
+    wingGradient.addColorStop(0, '#FFB74D'); // Light orange
+    wingGradient.addColorStop(0.3, '#FF9800'); // Orange
+    wingGradient.addColorStop(0.7, '#FF7043'); // Orange-red
+    wingGradient.addColorStop(1, '#FF5722'); // Deep orange-red
+    
+    cxt.fillStyle = wingGradient;
+    cxt.beginPath();
+    cxt.ellipse(centerX - radius * 0.6, centerY + radius * 0.4, radius * 1.0, radius * 0.5, -0.3, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Add wing outline
+    cxt.strokeStyle = '#E65100';
+    cxt.lineWidth = 2;
+    cxt.beginPath();
+    cxt.ellipse(centerX - radius * 0.6, centerY + radius * 0.4, radius * 1.0, radius * 0.5, -0.3, 0, 2 * Math.PI);
+    cxt.stroke();
+    
+    // Add feather details on wing
+    cxt.strokeStyle = '#D84315';
+    cxt.lineWidth = 1.5;
+    for (var i = 0; i < 4; i++) {
+      var featherAngle = -0.3 + (i * 0.15);
+      var startX = centerX - radius * 0.6 + Math.cos(featherAngle) * radius * 0.5;
+      var startY = centerY + radius * 0.4 + Math.sin(featherAngle) * radius * 0.2;
+      var endX = startX + Math.cos(featherAngle) * radius * 0.6;
+      var endY = startY + Math.sin(featherAngle) * radius * 0.3;
+      
+      cxt.beginPath();
+      cxt.moveTo(startX, startY);
+      cxt.lineTo(endX, endY);
+      cxt.stroke();
+    }
+    
+    // Add small tail feathers
+    var tailGradient = cxt.createRadialGradient(centerX - radius * 0.8, centerY + radius * 0.2, 0, centerX - radius * 0.8, centerY + radius * 0.2, radius * 0.3);
+    tailGradient.addColorStop(0, '#FF7043');
+    tailGradient.addColorStop(1, '#FF5722');
+    
+    cxt.fillStyle = tailGradient;
+    for (var i = 0; i < 3; i++) {
+      var tailAngle = 0.3 + (i * 0.2);
+      var tailX = centerX - radius * 0.9 + Math.cos(tailAngle) * radius * 0.2;
+      var tailY = centerY + radius * 0.3 + Math.sin(tailAngle) * radius * 0.1;
+      
+      cxt.beginPath();
+      cxt.ellipse(tailX, tailY, radius * 0.15, radius * 0.08, tailAngle, 0, 2 * Math.PI);
+      cxt.fill();
+    }
+    
+    // Restore context
+    cxt.restore();
+  }
+  
+  function drawCloud(cxt, cloud) {
+    var x = cloud.x;
+    var y = cloud.y;
+    var size = cloud.size;
+    var puffiness = cloud.puffiness;
+    var stretch = cloud.stretch;
+    
+    // Create an off-screen canvas for the cloud
+    var cloudCanvas = document.createElement('canvas');
+    var cloudBounds = size * Math.max(stretch, puffiness) * 2;
+    cloudCanvas.width = cloudBounds;
+    cloudCanvas.height = cloudBounds;
+    var cloudCtx = cloudCanvas.getContext('2d');
+    
+    // Offset for drawing on the cloud canvas (center the cloud)
+    var offsetX = cloudBounds / 2;
+    var offsetY = cloudBounds / 2;
+    
+    // Draw cloud on off-screen canvas with solid color
+    cloudCtx.fillStyle = cloud.color;
+    
+    // Draw cloud as multiple overlapping circles
+    // Main body - larger and affected by stretch
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX, offsetY, size * 0.5 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
+    
+    // Side puffs - affected by stretch and puffiness
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX + size * 0.4 * stretch, offsetY, size * 0.4 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
+    
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX - size * 0.4 * stretch, offsetY, size * 0.4 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
+    
+    // Top puffs - more varied positioning
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX + size * 0.2 * stretch, offsetY - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
+    
+    cloudCtx.beginPath();
+    cloudCtx.arc(offsetX - size * 0.2 * stretch, offsetY - size * 0.3 * puffiness, size * 0.35 * puffiness, 0, 2 * Math.PI);
+    cloudCtx.fill();
+    
+    // Add extra puffs for larger clouds
+    if (size > 40) {
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX + size * 0.1, offsetY + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+      
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX - size * 0.1, offsetY + size * 0.2, size * 0.25 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+    }
+    
+    // Add even more puffs for very large clouds
+    if (size > 70) {
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX + size * 0.6 * stretch, offsetY - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+      
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX - size * 0.6 * stretch, offsetY - size * 0.1, size * 0.3 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+      
+      cloudCtx.beginPath();
+      cloudCtx.arc(offsetX, offsetY - size * 0.5 * puffiness, size * 0.2 * puffiness, 0, 2 * Math.PI);
+      cloudCtx.fill();
+    }
+    
+    // Now draw the entire cloud canvas to the main canvas with opacity
+    cxt.save();
+    cxt.globalAlpha = cloud.opacity;
+    cxt.drawImage(cloudCanvas, x - offsetX, y - offsetY);
+    cxt.restore();
+  }
+
+  function drawBuilding(cxt, building) {
+    var x = building.x;
+    var y = building.y;
+    var w = building.width;
+    var h = building.height;
+    
+    // Draw building silhouette using its assigned color
+    cxt.fillStyle = building.color;
+    cxt.fillRect(x, y, w, h);
+    
+    // Add some subtle building details if the building has windows
+    if (building.windows && w > 20 * SCALE_X) {
+      // Make windows slightly lighter than the building color
+      var windowColor = building.color === '#3F4147' ? '#4F5157' :
+                       building.color === '#4B4D52' ? '#5B5D62' :
+                       building.color === '#5A4741' ? '#6A5751' :
+                       building.color === '#6B5D56' ? '#7B6D66' :
+                       building.color === '#525459' ? '#626469' :
+                       building.color === '#4A5451' ? '#5A6461' :
+                       building.color === '#3A4C4C' ? '#4A5C5C' :
+                       '#605C59'; // Default lighter for #504C49
+      cxt.fillStyle = windowColor;
+      
+      // Draw simple window grid
+      var windowSize = Math.max(2, w * 0.15);
+      var windowSpacing = windowSize * 1.5;
+      var startX = x + windowSpacing;
+      var startY = y + windowSpacing;
+      
+      for (var row = startY; row < y + h - windowSize; row += windowSpacing) {
+        for (var col = startX; col < x + w - windowSize; col += windowSpacing) {
+          // Randomly skip some windows for variety
+          if (Math.random() > 0.7) continue;
+          cxt.fillRect(col, row, windowSize * 0.6, windowSize * 0.6);
+        }
+      }
+    }
+    
+    // Add antenna if building has one
+    if (building.antenna) {
+      var antennaX = x + w * 0.5;
+      var antennaHeight = h * 0.2;
+      // Use the building color for antenna but slightly darker
+      var antennaColor = building.color === '#3F4147' ? '#2F3137' :
+                        building.color === '#4B4D52' ? '#3B3D42' :
+                        building.color === '#5A4741' ? '#4A3731' :
+                        building.color === '#6B5D56' ? '#5B4D46' :
+                        building.color === '#525459' ? '#424449' :
+                        building.color === '#4A5451' ? '#3A4441' :
+                        building.color === '#3A4C4C' ? '#2A3C3C' :
+                        '#403C39'; // Default darker for #504C49
+      cxt.strokeStyle = antennaColor;
+      cxt.lineWidth = Math.max(1, w * 0.02);
+      cxt.beginPath();
+      cxt.moveTo(antennaX, y);
+      cxt.lineTo(antennaX, y - antennaHeight);
+      cxt.stroke();
+    }
+  }
+  
+  function drawPipe(cxt, pipe, adjX) {
+    var x = pipe.pos.x - (adjX - RENDER_X * SCALE_X);
+    var y = pipe.pos.y;
+    var w = pipe.size.width;
+    var h = pipe.size.height;
+    
+    // Extend pipes to full viewport height
+    var isTopPipe = y === 0;
+    var drawY = isTopPipe ? 0 : y;
+    var drawHeight = isTopPipe ? y + h : window.innerHeight - y;
+    
+    // Draw pipe shadow/outline
+    cxt.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    cxt.fillRect(x + 3, drawY + 2, w - 4, drawHeight);
+    
+    // Main pipe body with gradient
+    var gradient = cxt.createLinearGradient(x, 0, x + w, 0);
+    gradient.addColorStop(0, '#2E8B57'); // Sea green
+    gradient.addColorStop(0.3, '#32CD32'); // Lime green
+    gradient.addColorStop(0.7, '#228B22'); // Forest green
+    gradient.addColorStop(1, '#006400'); // Dark green
+    
+    cxt.fillStyle = gradient;
+    cxt.fillRect(x + 2, drawY, w - 4, drawHeight);
+    
+    // Add vertical texture lines
+    cxt.strokeStyle = 'rgba(0, 100, 0, 0.3)';
+    cxt.lineWidth = 1;
+    for (var i = 0; i < 3; i++) {
+      var lineX = x + w * (0.25 + i * 0.25);
+      cxt.beginPath();
+      cxt.moveTo(lineX, drawY);
+      cxt.lineTo(lineX, drawY + drawHeight);
+      cxt.stroke();
+    }
+    
+    // Pipe cap (wider section at the gap)
+    var capHeight = Math.min(25, h * 0.25);
+    var capWidth = w + 8;
+    var capX = x - 4;
+    var capY = isTopPipe ? y + h - capHeight : y;
+    
+    // Draw pipe cap shadow
+    cxt.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    cxt.fillRect(capX + 2, capY + 2, capWidth, capHeight);
+    
+    // Draw pipe cap with gradient
+    var capGradient = cxt.createLinearGradient(capX, 0, capX + capWidth, 0);
+    capGradient.addColorStop(0, '#3CB371'); // Medium sea green
+    capGradient.addColorStop(0.5, '#32CD32'); // Lime green
+    capGradient.addColorStop(1, '#228B22'); // Forest green
+    
+    cxt.fillStyle = capGradient;
+    cxt.fillRect(capX, capY, capWidth, capHeight);
+    
+    // Add cap border
+    cxt.strokeStyle = '#006400';
+    cxt.lineWidth = 2;
+    cxt.strokeRect(capX, capY, capWidth, capHeight);
+    
+    // Add highlight on the left side of pipe body
+    var highlightGradient = cxt.createLinearGradient(x + 2, 0, x + 8, 0);
+    highlightGradient.addColorStop(0, 'rgba(144, 238, 144, 0.8)'); // Light green
+    highlightGradient.addColorStop(1, 'rgba(144, 238, 144, 0)');
+    
+    cxt.fillStyle = highlightGradient;
+    cxt.fillRect(x + 2, drawY, 6, drawHeight);
+    
+    // Add highlight on pipe cap
+    var capHighlightGradient = cxt.createLinearGradient(capX, 0, capX + 8, 0);
+    capHighlightGradient.addColorStop(0, 'rgba(152, 251, 152, 0.9)'); // Pale green
+    capHighlightGradient.addColorStop(1, 'rgba(152, 251, 152, 0)');
+    
+    cxt.fillStyle = capHighlightGradient;
+    cxt.fillRect(capX, capY, 8, capHeight);
+    
+    // Add rivets/bolts on the cap
+    cxt.fillStyle = '#2F4F2F'; // Dark slate gray
+    var rivetSize = Math.max(2, w * 0.08);
+    var rivetY = capY + capHeight / 2;
+    
+    // Left rivet
+    cxt.beginPath();
+    cxt.arc(capX + rivetSize + 2, rivetY, rivetSize, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Right rivet
+    cxt.beginPath();
+    cxt.arc(capX + capWidth - rivetSize - 2, rivetY, rivetSize, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    // Add rivet highlights
+    cxt.fillStyle = '#696969'; // Dim gray
+    cxt.beginPath();
+    cxt.arc(capX + rivetSize + 2, rivetY - 1, rivetSize * 0.6, 0, 2 * Math.PI);
+    cxt.fill();
+    
+    cxt.beginPath();
+    cxt.arc(capX + capWidth - rivetSize - 2, rivetY - 1, rivetSize * 0.6, 0, 2 * Math.PI);
+    cxt.fill();
+  }
+
+  function render(game, canvas) {
+    var cxt = canvas.getContext('2d');
+
+    cxt.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Always draw skyline first (background layer)
+    game.skyline.forEach(function(building) {
+      drawBuilding(cxt, building);
+    });
+    
+    // Always draw clouds, regardless of game state
+    game.clouds.forEach(function(cloud) {
+      drawCloud(cxt, cloud);
+    });
+    
+    if (game.state === 'playing') {
+      drawHero(cxt, game.hero);
+
+      game.pipes.forEach(function(pipe) {
+        drawPipe(cxt, pipe, game.hero.pos.x);
+      });
+
+      // Update score display
+      var scoreElement = document.getElementById('scoreDisplay');
+      scoreElement.textContent = game.score;
+      scoreElement.style.display = 'block';
+    } else {
+      // Hide score when not playing
+      document.getElementById('scoreDisplay').style.display = 'none';
+    }
+    
+    // Always draw foreground clouds last (on top of everything)
+    game.foregroundClouds.forEach(function(cloud) {
+      drawCloud(cxt, cloud);
+    });
+  }
+
+  function setupEventHandlers(game) {
+    document.addEventListener('keydown', function(evt) {
+      if (game.state === 'instructions' && evt.keyCode === 27) { // ESC key
+        showTitleScreen(game);
+      } else if (game.state === 'playing') {
+        if (evt.keyCode == 80) { // P key
+          game.pause = ! game.pause;
+        } else if(evt.keyCode == 32 && !game.isGameOver) { // space
+          jumpRequested = true; // Request a jump on next animation frame
+        }
+      }
+    });
+  }
+  
+  function genRequestAnimFunction(root, game, canvas, callback) {
+    var lastTimestamp = 0;
+    var needsRender = true;
+    var lastPauseState = false;
+    
+    var requestAnim = function (timestamp) {
+      var elapsed = timestamp - (lastTimestamp || timestamp);
+      elapsed = elapsed / 1000.0;
+      
+      // Check if pause state changed
+      var pauseStateChanged = (game.pause !== lastPauseState);
+      lastPauseState = game.pause;
+      
+      tick(game, elapsed);
+      
+      // Only render if game is not paused, or if pause state just changed, or if we need to render
+      if (!game.pause || pauseStateChanged || needsRender) {
+        render(game, canvas);
+        needsRender = false;
+      }
+      
+      lastTimestamp = timestamp;
+      callback(requestAnim);
+    };
+    
+    // Expose function to request render (for resize events)
+    requestAnim.requestRender = function() {
+      needsRender = true;
+    };
+    
+    return requestAnim;
+  }
+
+
+  // Remove border functions - canvas is now fullscreen
+  
+  function startGame(game) {
+    game.state = 'playing';
+    game.isGameOver = false;
+    game.pause = false;
+    game.score = 0;
+    game.pipes = [];
+    game.clouds = generateClouds(); // Regenerate clouds for new game
+    game.foregroundClouds = generateForegroundClouds(); // Regenerate foreground clouds for new game
+    game.skyline = generateSkyline(); // Regenerate skyline for new game
+    game.hero.pos = {x: 20 * SCALE_X, y: 20 * SCALE_Y};
+    game.hero.size = getScaledHeroSize(); // Update hero size for current scale
+    game.hero.vel = {x: HERO_SPEED * SCALE_X, y: 0};
+    game.lastHole = null;
+    
+    // Hide all overlays
+    document.getElementById('titleScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'none';
+    
+    initAudio();
+  }
+  
+  function showInstructions(game) {
+    game.state = 'instructions';
+    document.getElementById('titleScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'flex';
+    document.getElementById('gameOverScreen').style.display = 'none';
+  }
+  
+  function showTitleScreen(game) {
+    game.state = 'title';
+    updateHighScoreDisplay();
+    document.getElementById('titleScreen').style.display = 'flex';
+    document.getElementById('instructionsScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'none';
+  }
+  
+  function updateHighScoreDisplay() {
+    var topScore = getTopScore();
+    
+    // Update title screen (only top score)
+    document.getElementById('titleHighScoreValue').textContent = topScore.score;
+    document.getElementById('titleHighScoreInitials').textContent = topScore.initials;
+    
+    // Game over screen will be updated separately with player context
+  }
+  
+  function updateGameOverScoresList(playerScore, playerInitials) {
+    var scores = getHighScores();
+    var gameOverHighScore = document.getElementById('gameOverHighScore');
+    
+    if (scores.length === 0) {
+      gameOverHighScore.innerHTML = '<p style="margin: 0;">No High Scores Yet</p>';
+      return;
+    }
+    
+    var html = '<p style="margin: 0; margin-bottom: 15px; font-weight: bold;">High Scores</p>';
+    html += '<div style="display: grid; grid-template-columns: minmax(100px, auto) auto minmax(100px, 1fr); gap: 0px 8px; font-family: monospace;">';
+    
+    var playerMadeList = false;
+    var playerEntryIndex = -1;
+    
+    // Find the most recent player entry (should be the first match since scores are sorted by score desc)
+    for (var i = 0; i < scores.length; i++) {
+      if (scores[i].score === playerScore && scores[i].initials === playerInitials) {
+        playerMadeList = true;
+        playerEntryIndex = i;
+        break;
+      }
+    }
+    
+    // Display the high score list with grid layout
+    for (var i = 0; i < scores.length; i++) {
+      var score = scores[i];
+      var initialsText = score.initials || '';
+      var isPlayerScore = (i === playerEntryIndex); // Only highlight the specific entry
+      
+      var rowStyle = isPlayerScore ? 
+        'color: #00FF00; font-weight: bold; margin: 2px 0; padding: 2px 4px;' :
+        'margin: 2px 0; padding: 2px 4px;';
+      
+      // Score cell (right-aligned)
+      html += '<div style="text-align: right; ' + rowStyle + '">' + score.score + '</div>';
+      // Dash cell (center-aligned)
+      html += '<div style="text-align: center; ' + rowStyle + '">-</div>';
+      // Initials cell (left-aligned) with emoji if player score
+      html += '<div style="text-align: left; ' + rowStyle + '">' + initialsText + (isPlayerScore ? ' 👈' : '') + '</div>';
+    }
+    
+    // If player didn't make the list, show ellipsis and their score (unless score is 0)
+    if (!playerMadeList && playerScore > 0) {
+      // Ellipsis row spanning all columns
+      html += '<div style="grid-column: 1 / -1; text-align: center; color: #666; margin: 2px 0; padding: 2px 4px;">...</div>';
+      
+      var rowStyle = 'color: #00FF00; font-weight: bold; margin: 2px 0; padding: 2px 4px;';
+      var playerInitialsText = (playerInitials || 'You') + ' 👈';
+      
+      // Player score row
+      html += '<div style="text-align: right; ' + rowStyle + '">' + playerScore + '</div>';
+      html += '<div style="text-align: center; ' + rowStyle + '">-</div>';
+      html += '<div style="text-align: left; ' + rowStyle + '">' + playerInitialsText + '</div>';
+    }
+    
+    html += '</div>';
+    gameOverHighScore.innerHTML = html;
+  }
+  
+  function showGameOver(game) {
+    game.state = 'gameover';
+    
+    // Check for new high score
+    if (isNewHighScore(game.score)) {
+      document.getElementById('newHighScoreMessage').style.display = 'block';
+      
+      // Prompt for initials and save
+      promptForInitials(function(initials) {
+        saveHighScore(game.score, initials);
+        updateHighScoreDisplay();
+        // Show the player's new score in the list
+        updateGameOverScoresList(game.score, initials);
+      });
+    } else {
+      document.getElementById('newHighScoreMessage').style.display = 'none';
+      updateHighScoreDisplay();
+      // Show player's score below ellipsis if not a high score
+      updateGameOverScoresList(game.score, '');
+    }
+    
+    // Show game over screen
+    document.getElementById('titleScreen').style.display = 'none';
+    document.getElementById('instructionsScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'flex';
+  }
+
+  function enableStartButton(game) {
+    showGameOver(game);
+  }
+
+  var game; // Global reference for resize handler
+  var animationFunction; // Global reference for animation function
+  
+  // Create game first
+  game = newGame();
+  
+  // Create animation function
+  if(root.requestAnimationFrame) {
+    animationFunction = genRequestAnimFunction(root, game, null, function(funRequest) {
+      root.requestAnimationFrame(funRequest);
+    });
+  }
+  
+  // Create canvas with animation function reference
+  var canvas = setupCanvas(el, animationFunction);
+  
+  // Update animation function with canvas reference
+  if (animationFunction) {
+    animationFunction = genRequestAnimFunction(root, game, canvas, function(funRequest) {
+      root.requestAnimationFrame(funRequest);
+    });
+  }
+  
+  // Initial scaling update
+  updateGameBounds(game);
+  
+  // Initialize high score display
+  updateHighScoreDisplay();
+  
+  setupEventHandlers(game);
+  
+  var startButton = document.getElementById('startButton');
+  var instructionsButton = document.getElementById('instructionsButton');
+  var backButton = document.getElementById('backButton');
+  var restartButton = document.getElementById('restartButton');
+  
+  startButton.addEventListener('click', function() {
+    if (game.state === 'title') {
+      startGame(game);
+    } else if (game.state === 'instructions') {
+      showTitleScreen(game);
+    }
+  });
+  
+  instructionsButton.addEventListener('click', function() {
+    showInstructions(game);
+  });
+  
+  backButton.addEventListener('click', function() {
+    showTitleScreen(game);
+  });
+  
+  restartButton.addEventListener('click', function() {
+    startGame(game);
+  });
+  
+  // Global Enter key listener for starting/restarting game
+  document.addEventListener('keydown', function(evt) {
+    if (evt.keyCode == 13) { // Enter key
+      // Don't handle Enter if initials screen is visible
+      var initialsScreen = document.getElementById('initialsScreen');
+      if (initialsScreen.style.display === 'flex') {
+        return;
+      }
+      
+      if (game.state === 'title' || game.state === 'gameover') {
+        startGame(game);
+      } else if (game.state === 'instructions') {
+        showTitleScreen(game);
+      }
+    }
+  });
+  
+  // Start the animation loop
+  if(animationFunction) {
+    root.requestAnimationFrame(animationFunction);
+  }
+
+})(window, document.getElementById('game'));

@@ -13,7 +13,15 @@
       "mcp__playwright__browser_console_messages",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(npm install)",
+      "Bash(pnpm install:*)",
+      "Bash(mise use:*)",
+      "Bash(mise exec -- pnpm install)",
+      "Bash(mise exec -- pnpm test:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
