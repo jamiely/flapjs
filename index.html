@@ -1,154 +1,407 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-<meta charset="UTF-8">
-<title>FlapJS - Flappy Bird Game</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<style>
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #87CEEB;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-}
+  <head>
+    <meta charset="UTF-8" />
+    <title>FlapJS - Flappy Bird Game</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #87ceeb;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
 
-#game {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+      #game {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
 
-#gameCanvas {
-  background-color: #87CEEB;
-}
+      #gameCanvas {
+        background-color: #87ceeb;
+      }
 
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-  padding: 20px;
-  box-sizing: border-box;
-}
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        padding: 20px;
+        box-sizing: border-box;
+      }
 
-#titleScreen {
-  /* Size will be set dynamically */
-}
+      #titleScreen {
+        /* Size will be set dynamically */
+      }
 
-#instructionsScreen {
-  /* Size will be set dynamically */
-  background-color: rgba(0, 0, 0, 0.9);
-  display: none;
-  align-items: flex-start;
-}
+      #instructionsScreen {
+        /* Size will be set dynamically */
+        background-color: rgba(0, 0, 0, 0.9);
+        display: none;
+        align-items: flex-start;
+      }
 
-#gameOverScreen {
-  /* Size will be set dynamically */
-  background-color: rgba(0, 0, 0, 0.9);
-  display: none;
-}
+      #gameOverScreen {
+        /* Size will be set dynamically */
+        background-color: rgba(0, 0, 0, 0.9);
+        display: none;
+      }
 
-/* GitHub Corner Styles */
-.github-corner:hover .octo-arm {
-  animation: octocat-wave 560ms ease-in-out;
-}
+      /* GitHub Corner Styles */
+      .github-corner:hover .octo-arm {
+        animation: octocat-wave 560ms ease-in-out;
+      }
 
-@keyframes octocat-wave {
-  0%, 100% {
-    transform: rotate(0);
-  }
-  20%, 60% {
-    transform: rotate(-25deg);
-  }
-  40%, 80% {
-    transform: rotate(10deg);
-  }
-}
+      @keyframes octocat-wave {
+        0%,
+        100% {
+          transform: rotate(0);
+        }
+        20%,
+        60% {
+          transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+          transform: rotate(10deg);
+        }
+      }
 
-@media (max-width: 500px) {
-  .github-corner:hover .octo-arm {
-    animation: none;
-  }
-  .github-corner .octo-arm {
-    animation: octocat-wave 560ms ease-in-out;
-  }
-}
-</style>
-</head>
-<body>
-<div id="game">
-  <!-- Title Screen Overlay -->
-  <div id="titleScreen" class="overlay">
-    <h1 style="font-size: 48px; color: #FFD700; text-shadow: 2px 2px 4px #000; margin-bottom: 20px; margin-top: 0;">FlapJS</h1>
-    <div id="titleHighScore" style="color: white; font-size: 16px; margin-bottom: 20px; text-align: center;">
-      <p style="margin: 0;">High Score</p>
-      <p id="titleHighScoreValue" style="font-size: 24px; margin: 5px 0; color: #FFD700; font-weight: bold;">0</p>
-      <p id="titleHighScoreInitials" style="font-size: 14px; margin: 0; color: #ccc;"></p>
+      @media (max-width: 500px) {
+        .github-corner:hover .octo-arm {
+          animation: none;
+        }
+        .github-corner .octo-arm {
+          animation: octocat-wave 560ms ease-in-out;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game">
+      <!-- Title Screen Overlay -->
+      <div id="titleScreen" class="overlay">
+        <h1
+          style="
+            font-size: 48px;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px #000;
+            margin-bottom: 20px;
+            margin-top: 0;
+          "
+        >
+          FlapJS
+        </h1>
+        <div
+          id="titleHighScore"
+          style="
+            color: white;
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+          "
+        >
+          <p style="margin: 0">High Score</p>
+          <p
+            id="titleHighScoreValue"
+            style="
+              font-size: 24px;
+              margin: 5px 0;
+              color: #ffd700;
+              font-weight: bold;
+            "
+          >
+            0
+          </p>
+          <p
+            id="titleHighScoreInitials"
+            style="font-size: 14px; margin: 0; color: #ccc"
+          ></p>
+        </div>
+        <div>
+          <button
+            id="startButton"
+            style="
+              font-size: 24px;
+              padding: 15px 30px;
+              margin: 10px;
+              background-color: #4caf50;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              min-width: 150px;
+            "
+          >
+            Start
+          </button>
+          <button
+            id="instructionsButton"
+            style="
+              font-size: 24px;
+              padding: 15px 30px;
+              margin: 10px;
+              background-color: #2196f3;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              min-width: 150px;
+            "
+          >
+            Instructions
+          </button>
+        </div>
+      </div>
+
+      <!-- Instructions Overlay -->
+      <div id="instructionsScreen" class="overlay">
+        <h2
+          style="
+            color: #2196f3;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 24px;
+            align-self: center;
+          "
+        >
+          Instructions
+        </h2>
+        <ul
+          style="
+            color: white;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0;
+            padding-left: 20px;
+          "
+        >
+          <li>Press SPACE, tap the screen, or click to jump/flap</li>
+          <li>Press P to pause/unpause the game</li>
+          <li>Press ENTER to start/restart the game</li>
+        </ul>
+        <div style="align-self: center; margin-top: 20px">
+          <button
+            id="backButton"
+            style="
+              font-size: 18px;
+              padding: 10px 20px;
+              background-color: #4caf50;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+            "
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Game Over Overlay -->
+      <div id="gameOverScreen" class="overlay">
+        <h1
+          style="
+            color: #ff4444;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px #000;
+          "
+        >
+          Game Over
+        </h1>
+        <p
+          id="newHighScoreMessage"
+          style="
+            margin: 0 0 15px 0;
+            color: #00ff00;
+            font-weight: bold;
+            display: none;
+            font-size: 18px;
+          "
+        >
+          NEW HIGH SCORE!
+        </p>
+        <div
+          id="gameOverHighScore"
+          style="
+            color: white;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+          "
+        >
+          <p style="margin: 0">High Scores</p>
+        </div>
+        <button
+          id="restartButton"
+          style="
+            font-size: 20px;
+            padding: 12px 24px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            min-width: 120px;
+          "
+        >
+          Restart
+        </button>
+
+        <!-- GitHub Corner Banner -->
+        <a
+          href="https://github.com/jamiely/flapjs"
+          class="github-corner"
+          target="_blank"
+          style="position: absolute; top: 0; right: 0; z-index: 20"
+        >
+          <svg
+            width="80"
+            height="80"
+            viewBox="0 0 250 250"
+            style="
+              fill: #64ceaa;
+              color: #fff;
+              position: absolute;
+              top: 0;
+              border: 0;
+              right: 0;
+            "
+          >
+            <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+            <path
+              d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor"
+              style="transform-origin: 130px 106px"
+              class="octo-arm"
+            ></path>
+            <path
+              d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor"
+              class="octo-body"
+            ></path>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Score Display -->
+      <div
+        id="scoreDisplay"
+        style="
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 5;
+          color: rgba(128, 128, 128, 0.5);
+          font-family: Arial, sans-serif;
+          font-size: 48px;
+          font-weight: bold;
+          text-shadow:
+            -1px -1px 0 #fff,
+            1px -1px 0 #fff,
+            -1px 1px 0 #fff,
+            1px 1px 0 #fff;
+          display: none;
+        "
+      >
+        0
+      </div>
+
+      <!-- High Score Initials Input -->
+      <div
+        id="initialsScreen"
+        class="overlay"
+        style="display: none; background-color: rgba(0, 0, 0, 0.9)"
+      >
+        <h1
+          style="
+            color: #00ff00;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px #000;
+          "
+        >
+          NEW HIGH SCORE!
+        </h1>
+        <p
+          style="
+            color: white;
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-align: center;
+          "
+        >
+          Enter your initials:
+        </p>
+        <input
+          id="initialsInput"
+          type="text"
+          maxlength="5"
+          style="
+            font-size: 24px;
+            padding: 10px 15px;
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+            text-align: center;
+            background-color: white;
+            color: black;
+            font-weight: bold;
+            width: 150px;
+            margin-bottom: 20px;
+          "
+          placeholder="WIN"
+        />
+        <div>
+          <button
+            id="submitInitials"
+            style="
+              font-size: 20px;
+              padding: 12px 24px;
+              margin: 10px;
+              background-color: #4caf50;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              min-width: 100px;
+            "
+          >
+            Submit
+          </button>
+          <button
+            id="skipInitials"
+            style="
+              font-size: 20px;
+              padding: 12px 24px;
+              margin: 10px;
+              background-color: #666;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              min-width: 100px;
+            "
+          >
+            Skip
+          </button>
+        </div>
+      </div>
     </div>
-    <div>
-      <button id="startButton" style="font-size: 24px; padding: 15px 30px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 150px;">Start</button>
-      <button id="instructionsButton" style="font-size: 24px; padding: 15px 30px; margin: 10px; background-color: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 150px;">Instructions</button>
-    </div>
-  </div>
-  
-  <!-- Instructions Overlay -->
-  <div id="instructionsScreen" class="overlay">
-    <h2 style="color: #2196F3; margin-top: 0; margin-bottom: 15px; font-size: 24px; align-self: center;">Instructions</h2>
-    <ul style="color: white; font-size: 16px; line-height: 1.6; margin: 0; padding-left: 20px;">
-      <li>Press SPACE, tap the screen, or click to jump/flap</li>
-      <li>Press P to pause/unpause the game</li>
-      <li>Press ENTER to start/restart the game</li>
-    </ul>
-    <div style="align-self: center; margin-top: 20px;">
-      <button id="backButton" style="font-size: 18px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer;">Back</button>
-    </div>
-  </div>
-  
-  <!-- Game Over Overlay -->
-  <div id="gameOverScreen" class="overlay">
-    <h1 style="color: #FF4444; margin-top: 0; margin-bottom: 15px; font-size: 28px; text-shadow: 2px 2px 4px #000;">Game Over</h1>
-    <p id="newHighScoreMessage" style="margin: 0 0 15px 0; color: #00FF00; font-weight: bold; display: none; font-size: 18px;">NEW HIGH SCORE!</p>
-    <div id="gameOverHighScore" style="color: white; font-size: 14px; margin-bottom: 20px; text-align: center;">
-      <p style="margin: 0;">High Scores</p>
-    </div>
-    <button id="restartButton" style="font-size: 20px; padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 120px;">Restart</button>
-    
-    <!-- GitHub Corner Banner -->
-    <a href="https://github.com/jamiely/flapjs" class="github-corner" target="_blank" style="position: absolute; top: 0; right: 0; z-index: 20;">
-      <svg width="80" height="80" viewBox="0 0 250 250" style="fill:#64CEAA; color:#fff; position: absolute; top: 0; border: 0; right: 0;">
-        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
-        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
-        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path>
-      </svg>
-    </a>
-  </div>
-  
-  <!-- Score Display -->
-  <div id="scoreDisplay" style="position: fixed; top: 20px; right: 20px; z-index: 5; color: rgba(128, 128, 128, 0.5); font-family: Arial, sans-serif; font-size: 48px; font-weight: bold; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; display: none;">0</div>
-  
-  <!-- High Score Initials Input -->
-  <div id="initialsScreen" class="overlay" style="display: none; background-color: rgba(0, 0, 0, 0.9);">
-    <h1 style="color: #00FF00; margin-top: 0; margin-bottom: 20px; font-size: 32px; text-shadow: 2px 2px 4px #000;">NEW HIGH SCORE!</h1>
-    <p style="color: white; font-size: 18px; margin-bottom: 20px; text-align: center;">Enter your initials:</p>
-    <input id="initialsInput" type="text" maxlength="5" style="font-size: 24px; padding: 10px 15px; border: 2px solid #4CAF50; border-radius: 8px; text-align: center; background-color: white; color: black; font-weight: bold; width: 150px; margin-bottom: 20px;" placeholder="WIN">
-    <div>
-      <button id="submitInitials" style="font-size: 20px; padding: 12px 24px; margin: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 100px;">Submit</button>
-      <button id="skipInitials" style="font-size: 20px; padding: 12px 24px; margin: 10px; background-color: #666; color: white; border: none; border-radius: 8px; cursor: pointer; min-width: 100px;">Skip</button>
-    </div>
-  </div>
-</div>
-</body>
-<script type="module" src="src/main.js"></script>
+  </body>
+  <script type="module" src="src/main.js"></script>
 </html>
-

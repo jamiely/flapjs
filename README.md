@@ -2,7 +2,7 @@
 
 ![Gameplay](img/gameplay-big.png)
 
-A JavaScript implementation of Flappy Bird with enhanced visuals and atmospheric effects. 
+A JavaScript implementation of Flappy Bird with enhanced visuals and atmospheric effects.
 
 Play at: http://jamiely.github.io/flapjs
 
@@ -36,19 +36,21 @@ To play, open `index.html` in a browser. The game works on modern browsers inclu
 ## Screenshots
 
 ### Title Screen
+
 ![Title Screen](img/title-screen.png)
 
 ### Gameplay
+
 ![Gameplay](img/gameplay.png)
-*Features dynamic city skyline, atmospheric clouds, detailed bird animation, and industrial-style pipes*
+_Features dynamic city skyline, atmospheric clouds, detailed bird animation, and industrial-style pipes_
 
 ### Game Over
+
 ![Game Over](img/game-over.png)
-*High score tracking with GitHub corner banner for accessing source code*
+_High score tracking with GitHub corner banner for accessing source code_
 
 ## Legacy Media
 
-* 532364d (Original version)
-  * ![Screenshot](img/flapjs-532364d.png) 
-  * [Youtube](http://youtu.be/2xWL0K8jh6I)
-
+- 532364d (Original version)
+  - ![Screenshot](img/flapjs-532364d.png)
+  - [Youtube](http://youtu.be/2xWL0K8jh6I)

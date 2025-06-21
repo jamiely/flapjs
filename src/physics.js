@@ -10,7 +10,7 @@ export function pt(x, y) {
 export function addPt(a, b) {
   return {
     x: a.x + b.x,
-    y: a.y + b.y
+    y: a.y + b.y,
   };
 }
 
@@ -23,14 +23,16 @@ export function addToPt(a, b) {
 
 // Range checking utility - checks if b is between a and c
 export function between(b, a, c) {
-  return (a < b && b <= c) || 
-    (a >= b && b > c);
+  return (a < b && b <= c) || (a >= b && b > c);
 }
 
 // Point-in-rectangle collision test
 export function within(pt, b) {
-  if (between(pt.x, b.pos.x, b.pos.x + b.size.width) &&
-      between(pt.y, b.pos.y, b.pos.y + b.size.height)) return true;
+  if (
+    between(pt.x, b.pos.x, b.pos.x + b.size.width) &&
+    between(pt.y, b.pos.y, b.pos.y + b.size.height)
+  )
+    return true;
 
   return false;
 }
@@ -39,17 +41,20 @@ export function within(pt, b) {
 export function farPt(ent) {
   return {
     x: ent.pos.x + ent.size.width,
-    y: ent.pos.y + ent.size.height
+    y: ent.pos.y + ent.size.height,
   };
 }
 
 // Get all four corner points of an entity
 export function allPts(ent) {
-  return [pt(0, 0), pt(ent.size.width, 0),
-    pt(0, ent.size.height), pt(ent.size.width, ent.size.height)].
-    map(function(d) {
-      return addPt(ent.pos, d);
-    });
+  return [
+    pt(0, 0),
+    pt(ent.size.width, 0),
+    pt(0, ent.size.height),
+    pt(ent.size.width, ent.size.height),
+  ].map(function (d) {
+    return addPt(ent.pos, d);
+  });
 }
 
 // Check if any corner points of entity a are within entity b
@@ -69,16 +74,16 @@ export function getHeroCollisionBounds(hero) {
   var visualH = hero.size.height;
   var collisionW = visualW * collisionScale;
   var collisionH = visualH * collisionScale;
-  
+
   return {
     pos: {
       x: hero.pos.x + (visualW - collisionW) / 2,
-      y: hero.pos.y + (visualH - collisionH) / 2
+      y: hero.pos.y + (visualH - collisionH) / 2,
     },
     size: {
       width: collisionW,
-      height: collisionH
-    }
+      height: collisionH,
+    },
   };
 }
 
@@ -102,17 +107,17 @@ export const VectorUtils = {
   create: pt,
   add: addPt,
   addTo: addToPt,
-  isEqual: function(a, b) {
+  isEqual: function (a, b) {
     return a.x === b.x && a.y === b.y;
   },
-  distance: function(a, b) {
+  distance: function (a, b) {
     var dx = b.x - a.x;
     var dy = b.y - a.y;
     return Math.sqrt(dx * dx + dy * dy);
   },
-  magnitude: function(v) {
+  magnitude: function (v) {
     return Math.sqrt(v.x * v.x + v.y * v.y);
-  }
+  },
 };
 
 // Geometry utilities
@@ -124,7 +129,7 @@ export const GeometryUtils = {
   anyPtsWithin: anyPtsWithin,
   collides: collides,
   isOutOfBounds: isOutOfBounds,
-  getHeroCollisionBounds: getHeroCollisionBounds
+  getHeroCollisionBounds: getHeroCollisionBounds,
 };
 
 // Export all utilities as a single object for convenience
@@ -141,5 +146,5 @@ export const PhysicsUtils = {
   anyPtsWithin: anyPtsWithin,
   collides: collides,
   isOutOfBounds: isOutOfBounds,
-  getHeroCollisionBounds: getHeroCollisionBounds
+  getHeroCollisionBounds: getHeroCollisionBounds,
 };

@@ -1,122 +1,116 @@
-import {
-  newGame} from './gamestate.js';
+import { newGame } from "./gamestate.js";
 
 import {
   generateClouds,
   generateForegroundClouds,
   generateSkyline,
-} from './worldgen.js';
+} from "./worldgen.js";
 
-import {
-  updateHighScoreDisplay,
-} from './score.js'
+import { updateHighScoreDisplay } from "./score.js";
 
-import {
-  setupCanvas,
-  updateGameBounds,
-} from './draw.js'
+import { setupCanvas, updateGameBounds } from "./draw.js";
 
-import {
-  setupEventHandlers,
-} from './eventHandlers.js'
+import { setupEventHandlers } from "./eventHandlers.js";
 
-import {
-  showInstructions,
-  showTitleScreen,
-  startGame,
-} from './screens.js'
+import { showInstructions, showTitleScreen, startGame } from "./screens.js";
 
-import {
-  genRequestAnimFunction,
-} from './animationFunction.js'
+import { genRequestAnimFunction } from "./animationFunction.js";
 
-import {
-  tick,
-} from './tick.js'
+import { tick } from "./tick.js";
 
-export function setup(root, el){
-
-
+export function setup(root, el) {
   var game; // Global reference for resize handler
   var animationFunction; // Global reference for animation function
-  
+
   // Create game first
   game = newGame();
   // Populate world generation arrays
   game.clouds = generateClouds();
   game.foregroundClouds = generateForegroundClouds();
   game.skyline = generateSkyline();
-  
+
   // Create animation function
-  if(root.requestAnimationFrame) {
-    animationFunction = genRequestAnimFunction({root, game, canvas: null, callback: function(funRequest) {
-      root.requestAnimationFrame(funRequest);
-    }, tick});
+  if (root.requestAnimationFrame) {
+    animationFunction = genRequestAnimFunction({
+      root,
+      game,
+      canvas: null,
+      callback: function (funRequest) {
+        root.requestAnimationFrame(funRequest);
+      },
+      tick,
+    });
   }
-  
+
   // Create canvas with animation function reference
   var canvas = setupCanvas(game, el, animationFunction);
-  
+
   // Update animation function with canvas reference
   if (animationFunction) {
-    animationFunction = genRequestAnimFunction({root, game, canvas, callback: function(funRequest) {
-      root.requestAnimationFrame(funRequest);
-    }, tick});
+    animationFunction = genRequestAnimFunction({
+      root,
+      game,
+      canvas,
+      callback: function (funRequest) {
+        root.requestAnimationFrame(funRequest);
+      },
+      tick,
+    });
   }
-  
+
   // Initial scaling update
   updateGameBounds(game);
-  
+
   // Initialize high score display
   updateHighScoreDisplay();
-  
+
   setupEventHandlers(game);
-  
-  var startButton = document.getElementById('startButton');
-  var instructionsButton = document.getElementById('instructionsButton');
-  var backButton = document.getElementById('backButton');
-  var restartButton = document.getElementById('restartButton');
-  
-  startButton.addEventListener('click', function() {
-    if (game.state === 'title') {
+
+  var startButton = document.getElementById("startButton");
+  var instructionsButton = document.getElementById("instructionsButton");
+  var backButton = document.getElementById("backButton");
+  var restartButton = document.getElementById("restartButton");
+
+  startButton.addEventListener("click", function () {
+    if (game.state === "title") {
       startGame(game);
-    } else if (game.state === 'instructions') {
+    } else if (game.state === "instructions") {
       showTitleScreen(game);
     }
   });
-  
-  instructionsButton.addEventListener('click', function() {
+
+  instructionsButton.addEventListener("click", function () {
     showInstructions(game);
   });
-  
-  backButton.addEventListener('click', function() {
+
+  backButton.addEventListener("click", function () {
     showTitleScreen(game);
   });
-  
-  restartButton.addEventListener('click', function() {
+
+  restartButton.addEventListener("click", function () {
     startGame(game);
   });
-  
+
   // Global Enter key listener for starting/restarting game
-  document.addEventListener('keydown', function(evt) {
-    if (evt.keyCode == 13) { // Enter key
+  document.addEventListener("keydown", function (evt) {
+    if (evt.keyCode == 13) {
+      // Enter key
       // Don't handle Enter if initials screen is visible
-      var initialsScreen = document.getElementById('initialsScreen');
-      if (initialsScreen.style.display === 'flex') {
+      var initialsScreen = document.getElementById("initialsScreen");
+      if (initialsScreen.style.display === "flex") {
         return;
       }
-      
-      if (game.state === 'title' || game.state === 'gameover') {
+
+      if (game.state === "title" || game.state === "gameover") {
         startGame(game);
-      } else if (game.state === 'instructions') {
+      } else if (game.state === "instructions") {
         showTitleScreen(game);
       }
     }
   });
-  
+
   // Start the animation loop
-  if(animationFunction) {
+  if (animationFunction) {
     root.requestAnimationFrame(animationFunction);
   }
-
 }
