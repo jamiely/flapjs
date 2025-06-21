@@ -26,7 +26,10 @@
       "Bash(npm run test:run:*)",
       "Bash(rg:*)",
       "Bash(git rm:*)",
-      "Bash(rm:*)"
+      "Bash(npm run test:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vitest run:*)"
     ],
     "deny": []
   }
