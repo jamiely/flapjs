@@ -24,7 +24,9 @@
       "Bash(grep:*)",
       "Bash(npm test:*)",
       "Bash(npm run test:run:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(git rm:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

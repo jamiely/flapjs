@@ -16,6 +16,20 @@ import {
   updateScaling
 } from './config.js';
 
+import {
+  pt,
+  addPt,
+  addToPt,
+  between,
+  within,
+  farPt,
+  allPts,
+  anyPtsWithin,
+  getHeroCollisionBounds,
+  collides,
+  isOutOfBounds
+} from './physics.js';
+
 (function(root, el){
   // Input throttling
   var jumpRequested = false;             // Flag to throttle jump input to animation frames
@@ -605,27 +619,9 @@ import {
     return game;
   }
 
-  function pt(x,y) {
-    return {x:x, y:y};
-  }
-  function addToPt(a, b) {
-    a.x += b.x;
-    a.y += b.y;
-    return a;
-  }
-  function addPt(a, b) {
-    return {
-      x: a.x + b.x,
-      y: a.y + b.y
-    };
-  }
-
-  function heroIsOutOfBounds(hero) {
-    return hero.pos.y > scaling.BOTTOM;
-  }
 
   function isGameOver(game) {
-    if(heroIsOutOfBounds(game.hero)) return true;
+    if(isOutOfBounds(game.hero, scaling.BOTTOM)) return true;
 
     for(var i = 0; i<game.pipes.length; i ++ ) {
       if(collides(game.hero, game.pipes[i])) return true;
@@ -868,74 +864,12 @@ import {
     checkScore(game);
   }
 
-  function between(b, a, c) {
-    return (a < b && b <= c) || 
-      (a >= b && b > c);
-  }
-
-  function within(pt, b) {
-    if(between(pt.x, b.pos.x, b.pos.x + b.size.width) &&
-      between(pt.y, b.pos.y, b.pos.y + b.size.height)) return true;
-
-    return false;
-  }
-
-  function farPt(ent) {
-    return {
-      x: ent.pos.x + ent.size.width,
-      y: ent.pos.y + ent.size.height
-    };
-  }
 
   function p(ent) {
     return "[size=" + ent.size.width + "," + ent.size.height + 
       " pos=" + ent.pos.x + "," + ent.pos.y +  "]";
   }
 
-  function allPts(ent) {
-    return [pt(0, 0), pt(ent.size.width, 0),
-      pt(0, ent.size.height), pt(ent.size.width, ent.size.height)].
-      map(function(d) {
-        return addPt(ent.pos, d);
-      });
-  }
-
-  function anyPtsWithin(a, b) {
-    var allPtsA = allPts(a);
-    for(var i = 0; i < allPtsA.length; i ++ ) {
-      if(within(allPtsA[i], b)) return true;
-    }
-    return false;
-  }
-
-  function getHeroCollisionBounds(hero) {
-    // Create a smaller collision box (60% of visual size, centered)
-    var collisionScale = 0.6;
-    var visualW = hero.size.width;
-    var visualH = hero.size.height;
-    var collisionW = visualW * collisionScale;
-    var collisionH = visualH * collisionScale;
-    
-    return {
-      pos: {
-        x: hero.pos.x + (visualW - collisionW) / 2,
-        y: hero.pos.y + (visualH - collisionH) / 2
-      },
-      size: {
-        width: collisionW,
-        height: collisionH
-      }
-    };
-  }
-
-  function collides(a, b) {
-    // Use smaller collision bounds for hero
-    var heroCollisionBounds = getHeroCollisionBounds(a);
-    if(anyPtsWithin(heroCollisionBounds, b)) return true;
-    if(anyPtsWithin(b, heroCollisionBounds)) return true;
-
-    return false;
-  }
 
   function drawHero(cxt, hero) {
     var x = RENDER_X * scaling.SCALE_X;
