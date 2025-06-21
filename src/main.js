@@ -69,7 +69,7 @@ import {
     } else if(isGameOver(game)) {
       game.isGameOver = true;
       playGameOverSound();
-      enableStartButton(game);
+      showGameOver(game);
       return;
     }
 
@@ -95,10 +95,6 @@ import {
     // Keep horizontal velocity constant
     game.hero.vel.x = HERO_SPEED * scaling.SCALE_X;
     handlePipes(game);
-  }
-
-  function enableStartButton(game) {
-    showGameOver(game);
   }
 
   var game; // Global reference for resize handler
