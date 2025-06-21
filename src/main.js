@@ -47,6 +47,10 @@ import {
   startGame,
 } from './screens.js'
 
+import {
+  genRequestAnimFunction,
+} from './animationFunction.js'
+
 (function(root, el){
 
   // tick the game by delta seconds
@@ -93,40 +97,6 @@ import {
     handlePipes(game);
   }
 
-  function genRequestAnimFunction(root, game, canvas, callback) {
-    var lastTimestamp = 0;
-    var needsRender = true;
-    var lastPauseState = false;
-    
-    var requestAnim = function (timestamp) {
-      var elapsed = timestamp - (lastTimestamp || timestamp);
-      elapsed = elapsed / 1000.0;
-      
-      // Check if pause state changed
-      var pauseStateChanged = (game.pause !== lastPauseState);
-      lastPauseState = game.pause;
-      
-      tick(game, elapsed);
-      
-      // Only render if game is not paused, or if pause state just changed, or if we need to render
-      if (!game.pause || pauseStateChanged || needsRender) {
-        render(game, canvas);
-        needsRender = false;
-      }
-      
-      lastTimestamp = timestamp;
-      callback(requestAnim);
-    };
-    
-    // Expose function to request render (for resize events)
-    requestAnim.requestRender = function() {
-      needsRender = true;
-    };
-    
-    return requestAnim;
-  }
-
-
   function enableStartButton(game) {
     showGameOver(game);
   }
@@ -143,9 +113,9 @@ import {
   
   // Create animation function
   if(root.requestAnimationFrame) {
-    animationFunction = genRequestAnimFunction(root, game, null, function(funRequest) {
+    animationFunction = genRequestAnimFunction({root, game, canvas: null, callback: function(funRequest) {
       root.requestAnimationFrame(funRequest);
-    });
+    }, tick});
   }
   
   // Create canvas with animation function reference
@@ -153,9 +123,9 @@ import {
   
   // Update animation function with canvas reference
   if (animationFunction) {
-    animationFunction = genRequestAnimFunction(root, game, canvas, function(funRequest) {
+    animationFunction = genRequestAnimFunction({root, game, canvas, callback: function(funRequest) {
       root.requestAnimationFrame(funRequest);
-    });
+    }, tick});
   }
   
   // Initial scaling update
