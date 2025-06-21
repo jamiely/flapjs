@@ -94,13 +94,6 @@ import {
     handlePipes(game);
   }
 
-
-
-  function p(ent) {
-    return "[size=" + ent.size.width + "," + ent.size.height + 
-      " pos=" + ent.pos.x + "," + ent.pos.y +  "]";
-  }
-
   function genRequestAnimFunction(root, game, canvas, callback) {
     var lastTimestamp = 0;
     var needsRender = true;
